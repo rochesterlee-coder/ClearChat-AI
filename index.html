@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080b14" />
+  <title>ClearChat — Your AI workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <nav class="topbar">
+      <a class="brand" href="#" aria-label="ClearChat home">
+        <span class="brand-mark">C</span><span>ClearChat</span>
+      </a>
+      <span class="top-note">A new kind of AI workspace</span>
+    </nav>
+
+    <section class="hero" id="welcome">
+      <div class="eyebrow"><span class="spark"></span> YOUR AI WORKSPACE STARTS HERE</div>
+      <h1>Make room for<br><span>what's possible.</span></h1>
+      <p class="intro">One place for ideas, answers, and getting things done.</p>
+
+      <div class="choice-panel">
+        <button class="choice-card" id="localChoice" type="button">
+          <span class="choice-icon local-icon">⌘</span>
+          <span class="choice-copy">
+            <strong>Proceed Without Email</strong>
+            <small>Start right away on this device.</small>
+            <em>LOCAL DEVICE ONLY</em>
+          </span>
+          <span class="arrow">↗</span>
+        </button>
+
+        <div class="or-line"><span>OR</span></div>
+
+        <button class="choice-card" id="emailChoice" type="button">
+          <span class="choice-icon email-icon">✉</span>
+          <span class="choice-copy">
+            <strong>Proceed With Email</strong>
+            <small>Verify your email to set up your account.</small>
+          </span>
+          <span class="arrow">↗</span>
+        </button>
+      </div>
+      <p class="fine-print">Choose how you want to get started. You can decide later which AI tools to use.</p>
+    </section>
+
+    <section class="screen hidden" id="localScreen">
+      <button class="back" data-back>← Back</button>
+      <div class="screen-icon">⌘</div>
+      <div class="eyebrow">LOCAL DEVICE MODE</div>
+      <h2>Welcome to ClearChat.</h2>
+      <p>Your local session is ready. This mode is for this browser on this device only. Your session data is stored locally and is not synced to an account.</p>
+      <div class="notice"><strong>Local device only</strong><br>Clearing this browser's site data may remove locally stored information.</div>
+      <button class="primary" id="startLocal" type="button">Continue</button>
+    </section>
+
+    <section class="screen hidden" id="emailScreen">
+      <button class="back" data-back>← Back</button>
+      <div class="screen-icon">✉</div>
+      <div class="eyebrow">ACCOUNT SIGN-UP</div>
+      <h2>Verify your email.</h2>
+      <p>Enter your email address. We'll send you a verification link to confirm it's yours.</p>
+      <form id="emailForm">
+        <label for="email">Email address</label>
+        <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+        <button class="primary" id="sendButton" type="submit">Send verification email <span>→</span></button>
+      </form>
+      <p class="form-message" id="formMessage" role="status"></p>
+      <p class="tiny-note">Email verification will work after the Supabase setup in the README is completed.</p>
+    </section>
+
+    <section class="screen hidden" id="localReady">
+      <div class="screen-icon success">✓</div>
+      <div class="eyebrow">YOU'RE IN</div>
+      <h2>Local mode is ready.</h2>
+      <p>This is the starting point for your ClearChat AI workspace. The AI tools will be added in a later step.</p>
+      <button class="secondary" data-home>Back to home</button>
+    </section>
+
+    <section class="screen hidden" id="verifiedScreen">
+      <div class="screen-icon success">✓</div>
+      <div class="eyebrow">EMAIL VERIFIED</div>
+      <h2>You're verified.</h2>
+      <p>Your email confirmation was successful. Your ClearChat account setup can continue from here.</p>
+      <button class="secondary" data-home>Back to home</button>
+    </section>
+
+    <footer><span>© 2026 ClearChat</span><span>Built for possibilities.</span></footer>
+  </main>
+
+  <!-- Supabase client for email verification. Add your project URL and anon key in app.js. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
