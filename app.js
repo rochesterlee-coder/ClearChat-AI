@@ -1,63 +1,155 @@
-// ClearChat starter
-// For real email verification, create a Supabase project and add its public
-// Project URL + anon key below. Never put a service_role key in browser code.
-const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+// ClearChat - Authentication System
+
+const SUPABASE_URL = "https://kjrpibxiezomiflrpjeq.supabase.co";
+
+const SUPABASE_ANON_KEY = "sb_publishable_n3kb_AGzrnX7wjhuO0buyw_qu8Dfg-i";
 
 let supabaseClient = null;
-if (window.supabase && SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_")) {
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+if (window.supabase) {
+    supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+    );
 }
 
-const screens = ["welcome", "localScreen", "emailScreen", "localReady", "verifiedScreen"];
+// Website screens
+
+const screens = [
+    "welcome",
+    "localScreen",
+    "emailScreen",
+    "localReady",
+    "verifiedScreen"
+];
+
 function showScreen(id) {
-  screens.forEach(screen => document.getElementById(screen).classList.toggle("hidden", screen !== id));
-}
-document.getElementById("localChoice").addEventListener("click", () => showScreen("localScreen"));
-document.getElementById("emailChoice").addEventListener("click", () => showScreen("emailScreen"));
-document.querySelectorAll("[data-back]").forEach(button => button.addEventListener("click", () => showScreen("welcome")));
-document.querySelectorAll("[data-home]").forEach(button => button.addEventListener("click", () => showScreen("welcome")));
+    screens.forEach(screen => {
+        document.getElementById(screen).classList.add("hidden");
+    });
 
-document.getElementById("startLocal").addEventListener("click", () => {
-  // This marker stays in this browser only. No account or cloud sync is created.
-  localStorage.setItem("clearchat_mode", "local");
-  showScreen("localReady");
+    document.getElementById(id).classList.remove("hidden");
+}
+
+// Welcome screen
+
+document.getElementById("localChoice").addEventListener("click", function() {
+    showScreen("localScreen");
 });
 
-const params = new URLSearchParams(window.location.search);
-if (params.get("verified") === "1" || window.location.hash.includes("access_token")) {
-  showScreen("verifiedScreen");
-}
+document.getElementById("emailChoice").addEventListener("click", function() {
+    showScreen("emailScreen");
+});
 
-document.getElementById("emailForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const email = document.getElementById("email").value.trim();
-  const message = document.getElementById("formMessage");
-  const sendButton = document.getElementById("sendButton");
-  message.className = "form-message";
-  if (!supabaseClient) {
-    message.textContent = "Email verification isn't connected yet. Follow the Supabase setup in README.md, then try again.";
-    message.classList.add("error");
-    return;
-  }
-  sendButton.disabled = true;
-  sendButton.textContent = "Sending...";
-  try {
-    const { error } = await supabaseClient.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: window.location.origin + "/?verified=1"
-      }
+// Back buttons
+
+document.querySelectorAll("[data-back]").forEach(button => {
+    button.addEventListener("click", function() {
+        showScreen("welcome");
     });
-    if (error) throw error;
-    message.textContent = "Verification link sent. Check your inbox and click the link to verify your email.";
-    message.classList.add("success");
-  } catch (error) {
-    message.textContent = error.message || "Something went wrong. Please try again.";
-    message.classList.add("error");
-  } finally {
+});
+
+document.querySelectorAll("[data-home]").forEach(button => {
+    button.addEventListener("click", function() {
+        showScreen("welcome");
+    });
+});
+
+// Local device mode
+
+document.getElementById("startLocal").addEventListener("click", function() {
+    localStorage.setItem("clearchat_mode", "local");
+    showScreen("localReady");
+});
+
+// Email verification
+
+document.getElementById("emailForm").addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+
+    const message = document.getElementById("formMessage");
+
+    const sendButton = document.getElementById("sendButton");
+
+    message.textContent = "";
+
+    if (!supabaseClient) {
+        message.textContent = "Supabase could not load. Please refresh the page.";
+        message.className = "form-message error";
+        return;
+    }
+
+    sendButton.disabled = true;
+    sendButton.textContent = "Sending verification email...";
+
+    try {
+
+        const { error } = await supabaseClient.auth.signInWithOtp({
+
+            email: email,
+
+            options: {
+                shouldCreateUser: true,
+
+                emailRedirectTo: "https://clearchat.site/"
+            }
+
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        message.textContent =
+            "Verification email sent! Please check your inbox and click the verification link.";
+
+        message.className = "form-message success";
+
+    } catch (error) {
+
+        message.textContent = error.message;
+
+        message.className = "form-message error";
+
+    }
+
     sendButton.disabled = false;
     sendButton.innerHTML = 'Send verification email <span>→</span>';
-  }
+
 });
+
+// Detect successful email verification
+
+async function checkVerification() {
+
+    if (!supabaseClient) return;
+
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    if (data.session) {
+        showScreen("verifiedScreen");
+    }
+}
+
+if (supabaseClient) {
+
+    supabaseClient.auth.onAuthStateChange(function(event, session) {
+
+        if (event === "SIGNED_IN" && session) {
+            showScreen("verifiedScreen");
+        }
+
+    });
+
+    checkVerification();
+
+}
