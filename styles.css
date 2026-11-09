@@ -43,3 +43,20 @@
 .voice-status{font-size:12px;color:#4d5667;white-space:nowrap}
 .voice-transcript{display:none}
 @media(max-width:600px){.voice-overlay{padding:12px}.voice-bar{gap:8px;padding:8px}.voice-round{width:46px;height:46px;flex-basis:46px}.voice-center{gap:7px}.voice-status{font-size:10px}.voice-wave{gap:2px}}
+
+
+/* Profile names, pinned chats and temporary chat */
+.history-row { display:flex; align-items:center; gap:3px; }
+.history-open { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.history-pin, .history-delete {
+  border:0; background:transparent; color:var(--muted, #9aa4b8);
+  cursor:pointer; border-radius:7px; min-width:27px; height:29px;
+}
+.history-pin:hover, .history-delete:hover { background:rgba(140,150,180,.16); color:inherit; }
+.temporary-chat-button { margin-top:6px; opacity:.9; }
+.temporary-chat-notice {
+  padding:10px 14px; margin:0 auto 12px; max-width:760px;
+  border:1px solid rgba(150,160,190,.28); border-radius:12px;
+  color:var(--muted, #aab3c8); font-size:13px;
+  background:rgba(120,130,160,.08);
+}

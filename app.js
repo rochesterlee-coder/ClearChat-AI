@@ -7,6 +7,7 @@ let used = JSON.parse(localStorage.getItem("cc_usage") || '{"image":0,"video":0,
 let supabaseClient = null, recognition = null, toastTimer = null;
 let chats = JSON.parse(localStorage.getItem("cc_chats") || "[]");
 let currentChatId = null;
+let temporaryChat = null;
 
 if (window.supabase && CONFIG.SUPABASE_URL && CONFIG.SUPABASE_PUBLISHABLE_KEY && !CONFIG.SUPABASE_PUBLISHABLE_KEY.includes("PASTE_")) {
   supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_PUBLISHABLE_KEY);
@@ -68,26 +69,42 @@ $("signOutButton").onclick = leaveWorkspace;
 
 // Chat history is saved locally in this browser. It is not synced between devices.
 function saveChats() { localStorage.setItem("cc_chats", JSON.stringify(chats)); renderHistory(); }
-function makeChat() {
-  const chat = { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), title: "New chat", updatedAt: Date.now(), messages: [] };
+function makeChat(isTemporary = false) {
+  if (isTemporary) {
+    temporaryChat = { id: "temp-" + Date.now(), title: "Temporary chat", updatedAt: Date.now(), messages: [], temporary: true, pinned: false };
+    currentChatId = temporaryChat.id;
+    renderCurrentChat();
+    renderHistory();
+    return temporaryChat;
+  }
+  temporaryChat = null;
+  const chat = { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), title: "New chat", updatedAt: Date.now(), messages: [], pinned: false };
   chats.unshift(chat); currentChatId = chat.id; saveChats(); renderCurrentChat(); return chat;
 }
-function currentChat() { return chats.find(c => c.id === currentChatId); }
+function currentChat() {
+  if (temporaryChat && temporaryChat.id === currentChatId) return temporaryChat;
+  return chats.find(c => c.id === currentChatId);
+}
 function renderHistory() {
   const host = $("chatHistory"); if (!host) return;
   host.innerHTML = "";
-  chats.sort((a, b) => b.updatedAt - a.updatedAt).forEach(chat => {
+  const ordered = chats.slice().sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.updatedAt - a.updatedAt);
+  ordered.forEach(chat => {
     const row = document.createElement("div"); row.className = "history-row" + (chat.id === currentChatId ? " selected" : "");
-    const open = document.createElement("button"); open.className = "history-open"; open.textContent = chat.title || "New chat"; open.title = chat.title || "New chat";
-    open.onclick = () => { currentChatId = chat.id; renderCurrentChat(); renderHistory(); switchTool("chat"); };
+    const open = document.createElement("button"); open.className = "history-open"; open.textContent = (chat.pinned ? "📌 " : "") + (chat.title || "New chat"); open.title = chat.title || "New chat";
+    open.onclick = () => { temporaryChat = null; currentChatId = chat.id; renderCurrentChat(); renderHistory(); switchTool("chat"); };
+    const pin = document.createElement("button"); pin.className = "history-pin"; pin.textContent = chat.pinned ? "📌" : "☆"; pin.title = chat.pinned ? "Unpin conversation" : "Pin conversation";
+    pin.setAttribute("aria-label", pin.title);
+    pin.onclick = () => { chat.pinned = !chat.pinned; saveChats(); };
     const del = document.createElement("button"); del.className = "history-delete"; del.textContent = "×"; del.title = "Delete conversation";
-    del.onclick = () => { chats = chats.filter(c => c.id !== chat.id); if (currentChatId === chat.id) currentChatId = chats[0]?.id || null; saveChats(); renderCurrentChat(); };
-    row.append(open, del); host.appendChild(row);
+    del.onclick = () => { chats = chats.filter(c => c.id !== chat.id); if (currentChatId === chat.id) { currentChatId = null; temporaryChat = null; } saveChats(); renderCurrentChat(); };
+    row.append(open, pin, del); host.appendChild(row);
   });
 }
 function renderCurrentChat() {
   const messages = $("messages"); messages.innerHTML = "";
   const chat = currentChat();
+  $("temporaryChatNotice")?.classList.toggle("hidden", !chat?.temporary);
   $("welcome").classList.toggle("hidden", !!(chat && chat.messages.length));
   if (!chat) return;
   chat.messages.forEach(m => appendMessageElement(m.text, m.who));
@@ -104,9 +121,11 @@ function addMessage(text, who) {
   let chat = currentChat() || makeChat();
   chat.messages.push({ text, who, at: Date.now() }); chat.updatedAt = Date.now();
   if (who === "user" && chat.title === "New chat") chat.title = text.slice(0, 36) + (text.length > 36 ? "…" : "");
-  $("welcome").classList.add("hidden"); appendMessageElement(text, who); saveChats();
+  $("welcome").classList.add("hidden"); appendMessageElement(text, who);
+  if (chat.temporary) renderHistory(); else saveChats();
 }
-$("newChat").onclick = () => { makeChat(); $("chatInput").value = ""; switchTool("chat"); $("chatInput").focus(); };
+$("newChat").onclick = () => { makeChat(false); $("chatInput").value = ""; switchTool("chat"); $("chatInput").focus(); };
+$("newTemporaryChat").onclick = () => { makeChat(true); $("chatInput").value = ""; switchTool("chat"); $("chatInput").focus(); };
 
 function switchTool(tool) {
   document.querySelectorAll(".view").forEach(x => x.classList.add("hidden"));
@@ -321,7 +340,8 @@ $("voiceSend").onclick = () => {
 };
 
 
-function saveUsage() { localStorage.setItem("cc_usage", JSON.stringify(used)); updateUsage(); }
+function saveUsage() { localStorage.setItem("cc_usage", JSON.stringify(used)); applyDisplayName(localStorage.getItem("cc_display_name") || "");
+updateUsage(); }
 function updateUsage() { $("iu").textContent = used.image + " / 30"; $("vu").textContent = used.video + " / 10"; $("im").style.width = Math.min(100, used.image / 30 * 100) + "%"; $("vm").style.width = Math.min(100, used.video / 10 * 100) + "%"; }
 function credit(key) { if (used[key] >= LIMIT[key]) { toast("Free " + key + " allowance used. View plans to upgrade."); switchTool("plans"); return false; } used[key]++; saveUsage(); return true; }
 async function generate(kind, promptId, outputId, extra = {}) {
@@ -359,6 +379,25 @@ function setTheme(theme) { document.body.dataset.theme = theme; localStorage.set
 setTheme(localStorage.getItem("cc_theme") || "dark");
 $("themeQuick").onclick = () => { const options = ["dark", "black", "light", "white", "midnight"]; setTheme(options[(options.indexOf(document.body.dataset.theme) + 1) % options.length]); toast("Theme: " + document.body.dataset.theme); };
 $("settingsOpen").onclick = () => $("settingsModal").classList.remove("hidden");
+
+function applyDisplayName(name) {
+  const clean = (name || "").trim().slice(0, 32);
+  if (clean) localStorage.setItem("cc_display_name", clean);
+  else localStorage.removeItem("cc_display_name");
+  const label = clean || localStorage.getItem("clearchat_email") || "Local workspace";
+  $("accountLabel").textContent = label;
+  const avatar = document.querySelector(".profile .avatar");
+  if (avatar) avatar.textContent = (label.trim()[0] || "C").toUpperCase();
+  if ($("displayNameInput")) $("displayNameInput").value = clean;
+}
+$("settingsOpen").addEventListener("click", () => {
+  if ($("displayNameInput")) $("displayNameInput").value = localStorage.getItem("cc_display_name") || "";
+});
+$("saveDisplayName").onclick = () => {
+  applyDisplayName($("displayNameInput").value);
+  toast("Display name saved on this device.");
+};
+
 $("themeSelect").onchange = e => setTheme(e.target.value);
 $("saveSettings").onclick = () => { $("settingsModal").classList.add("hidden"); toast("Preferences saved on this device."); };
 $("ownerOpen").onclick = () => { $("ownerModal").classList.remove("hidden"); $("ownerCode").value = ""; $("ownerMessage").textContent = ""; };
@@ -375,6 +414,7 @@ $("verifyOwner").onclick = async () => {
   } catch (err) { message.textContent = err.message || "Could not verify owner access. Check that your backend is deployed."; }
   finally { button.disabled = false; }
 };
+applyDisplayName(localStorage.getItem("cc_display_name") || "");
 updateUsage();
 
 document.addEventListener("keydown", event => {

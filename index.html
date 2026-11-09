@@ -44,6 +44,7 @@
 
 <a class="brand" href="#"><span class="logo">C</span>ClearChat</a>
 <button class="newchat" id="newChat">＋ New chat</button>
+<button class="newchat temporary-chat-button" id="newTemporaryChat">◌ Temporary chat</button>
 <p class="label">WORKSPACE</p>
 
 <nav>
@@ -95,6 +96,7 @@
 
 <section id="chatView" class="view">
 <div class="chat">
+<div id="temporaryChatNotice" class="temporary-chat-notice hidden">◌ Temporary chat — this conversation will not be saved in history.</div>
 <div class="welcome" id="welcome">
 <div class="orb">✦</div>
 <small>YOUR AI WORKSPACE</small>
@@ -263,6 +265,9 @@
 <button class="close" data-close="settingsModal">×</button>
 <small>PREFERENCES</small>
 <h2>Settings</h2>
+<label for="displayNameInput">Your display name</label>
+<input id="displayNameInput" type="text" maxlength="32" placeholder="Enter your name">
+<button id="saveDisplayName" class="wide">Save name</button>
 <label>Appearance</label>
 <select id="themeSelect">
 <option value="dark">Dark</option>
