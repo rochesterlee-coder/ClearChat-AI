@@ -10,3 +10,12 @@
 .auth-card label{display:block;font-size:11px;font-weight:700;margin:18px 0 8px}.auth-card input{width:100%;padding:13px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:12px "DM Sans"}
 .auth-message{min-height:20px}.screen-icon{font-size:34px;color:#72dba7;margin-bottom:12px}
 @media(max-width:600px){.auth-card{padding:24px}}
+/* Local conversation history */
+.history-label{margin-top:20px}
+.chat-history{display:grid;gap:4px;max-height:34vh;overflow:auto;margin-bottom:12px}
+.history-row{display:flex;align-items:center;gap:4px;border-radius:8px}
+.history-row.selected{background:var(--panel2)}
+.history-open{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;background:transparent;border:0;color:var(--muted);padding:9px 10px;font:500 11px 'DM Sans';cursor:pointer}
+.history-row.selected .history-open,.history-open:hover{color:var(--text)}
+.history-delete{border:0;background:transparent;color:var(--muted);padding:5px 9px;border-radius:6px;cursor:pointer}
+.history-delete:hover{background:var(--panel2);color:var(--text)}
