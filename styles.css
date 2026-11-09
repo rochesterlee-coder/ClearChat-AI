@@ -214,3 +214,8 @@ button, select, input, textarea, a, [role="button"] {
 }
 button:not(:disabled) { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .65; }
+
+
+/* ClearChat app icon */
+.brand-icon-img{width:34px;height:34px;object-fit:cover;border-radius:10px;display:inline-block;vertical-align:middle;flex:0 0 auto}
+.logo-img{width:34px;height:34px;object-fit:cover;border-radius:10px;display:inline-block;vertical-align:middle;flex:0 0 auto}
