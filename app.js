@@ -327,6 +327,7 @@ document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => switchTo
 $("mobile").onclick = () => $("sidebar").classList.toggle("open");
 document.querySelectorAll("[data-prompt]").forEach(b => b.onclick = () => { $("chatInput").value = b.dataset.prompt; $("chatInput").focus(); });
 async function api(path, body) {
+  if (!API_BASE) throw new Error("AI backend is not connected yet. Set API_BASE_URL in config.js.");
   const response = await fetch(`${API_BASE}/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || data.message || `Request failed (${response.status})`);
