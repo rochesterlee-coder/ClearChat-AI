@@ -124,24 +124,202 @@ async function api(path, body) {
   if (!response.ok) throw new Error(data.error || data.message || `Request failed (${response.status})`);
   return data;
 }
-$("send").onclick = async () => {
-  const prompt = $("chatInput").value.trim(); if (!prompt) return;
-  $("chatInput").value = ""; addMessage(prompt, "user"); $("status").textContent = "Thinking…";
-  try { const data = await api("chat", { message: prompt, language: $("voiceLang").value }); addMessage(data.reply || "No reply returned.", "assistant"); }
-  catch { addMessage("ClearChat's AI is not connected yet. Your message has been saved in chat history. Connect an AI backend when you're ready.", "assistant"); }
-  $("status").textContent = "AI provider pending backend setup";
-};
-$("chatInput").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("send").click(); } };
-$("mic").onclick = () => {
+let activeChatController = null;
+let voiceModeOpen = false;
+let voiceRecognition = null;
+let voiceTranscript = "";
+let voiceIsListening = false;
+let voiceIsSpeaking = false;
+
+function setSendState(state) {
+  const button = $("send");
+  if (!button) return;
+  if (state === "busy") {
+    button.textContent = "■";
+    button.setAttribute("aria-label", "Stop response");
+    button.classList.add("send-stop");
+  } else if (state === "done") {
+    button.textContent = "✨";
+    button.setAttribute("aria-label", "Ready for another message");
+    button.classList.remove("send-stop");
+  } else {
+    button.textContent = "↑";
+    button.setAttribute("aria-label", "Send message");
+    button.classList.remove("send-stop");
+  }
+}
+function stopCurrentResponse() {
+  if (activeChatController) {
+    activeChatController.abort();
+    activeChatController = null;
+  }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  voiceIsSpeaking = false;
+  voiceIsListening = false;
+  if (voiceRecognition) {
+    try { voiceRecognition.stop(); } catch {}
+    voiceRecognition = null;
+  }
+  setSendState("done");
+  updateVoiceControls("Stopped");
+  $("status").textContent = "Stopped";
+}
+function updateVoiceControls(status) {
+  const statusEl = $("voiceStatus");
+  if (statusEl && status) statusEl.textContent = status;
+  const stop = $("voiceStop");
+  if (stop) stop.classList.toggle("voice-stop-active", voiceIsListening || voiceIsSpeaking || !!activeChatController);
+  const wave = $("voiceWave");
+  if (wave) wave.classList.toggle("active", voiceIsListening || voiceIsSpeaking);
+}
+function openVoiceMode() {
+  voiceModeOpen = true;
+  $("voiceOverlay").classList.remove("hidden");
+  $("voiceTranscript").textContent = "";
+  voiceTranscript = "";
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Speech) return toast("Speech recognition is unavailable in this browser. Try Chrome.");
-  if (recognition) { recognition.stop(); recognition = null; return; }
-  recognition = new Speech(); recognition.lang = $("voiceLang").value; recognition.interimResults = true;
-  recognition.onresult = e => { let text = ""; for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript; $("chatInput").value = text; };
-  recognition.onerror = () => toast("Check microphone permission.");
-  recognition.onend = () => { recognition = null; $("mic").textContent = "🎙 Voice"; };
-  $("mic").textContent = "■ Stop"; recognition.start();
+  if (!Speech) {
+    updateVoiceControls("Voice recognition isn't available in this browser. You can still type below.");
+    return;
+  }
+  try {
+    voiceRecognition = new Speech();
+    voiceRecognition.lang = $("voiceLang").value;
+    voiceRecognition.interimResults = true;
+    voiceRecognition.continuous = true;
+    voiceIsListening = true;
+    updateVoiceControls("Listening… speak now");
+    voiceRecognition.onresult = event => {
+      let finalText = "";
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const part = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += part;
+        else interimText += part;
+      }
+      if (finalText) voiceTranscript += (voiceTranscript ? " " : "") + finalText.trim();
+      $("voiceTranscript").textContent = (voiceTranscript + " " + interimText).trim();
+      $("chatInput").value = (voiceTranscript + " " + interimText).trim();
+    };
+    voiceRecognition.onerror = () => {
+      voiceIsListening = false;
+      updateVoiceControls("Microphone unavailable. Check browser permission.");
+    };
+    voiceRecognition.onend = () => {
+      voiceIsListening = false;
+      voiceRecognition = null;
+      if (!voiceIsSpeaking && !activeChatController) updateVoiceControls("Voice input paused");
+    };
+    voiceRecognition.start();
+  } catch {
+    voiceIsListening = false;
+    updateVoiceControls("Could not start microphone. Check permission.");
+  }
+}
+function closeVoiceMode() {
+  if (voiceRecognition) {
+    try { voiceRecognition.stop(); } catch {}
+    voiceRecognition = null;
+  }
+  voiceIsListening = false;
+  voiceModeOpen = false;
+  $("voiceOverlay").classList.add("hidden");
+  updateVoiceControls("");
+}
+function speakReply(text) {
+  if (!voiceModeOpen || !("speechSynthesis" in window) || !text) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = $("voiceLang").value;
+  utterance.onstart = () => {
+    voiceIsSpeaking = true;
+    updateVoiceControls("ClearChat is speaking…");
+    setSendState("busy");
+  };
+  utterance.onend = () => {
+    voiceIsSpeaking = false;
+    updateVoiceControls("Finished");
+    setSendState("done");
+  };
+  utterance.onerror = () => {
+    voiceIsSpeaking = false;
+    updateVoiceControls("Speech playback ended");
+    setSendState("done");
+  };
+  window.speechSynthesis.speak(utterance);
+}
+async function sendChatMessage() {
+  const prompt = $("chatInput").value.trim();
+  if (!prompt || activeChatController) return;
+  $("chatInput").value = "";
+  addMessage(prompt, "user");
+  $("status").textContent = "Thinking…";
+  setSendState("busy");
+  activeChatController = new AbortController();
+  const controller = activeChatController;
+  try {
+    const response = await fetch(`${API_BASE}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: prompt, language: $("voiceLang").value }),
+      signal: controller.signal
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || data.message || `Request failed (${response.status})`);
+    const reply = data.reply || "No reply returned.";
+    addMessage(reply, "assistant");
+    speakReply(reply);
+  } catch (err) {
+    if (err.name === "AbortError") {
+      addMessage("Response stopped.", "assistant");
+    } else {
+      const reply = "ClearChat's AI is not connected yet. Your message has been saved in chat history. Connect an AI backend when you're ready.";
+      addMessage(reply, "assistant");
+      speakReply(reply);
+    }
+  } finally {
+    if (activeChatController === controller) activeChatController = null;
+    $("status").textContent = "AI provider pending backend setup";
+    if (!voiceIsSpeaking) setSendState("done");
+    updateVoiceControls(voiceIsSpeaking ? "ClearChat is speaking…" : "Finished");
+  }
+}
+$("send").onclick = () => {
+  if (activeChatController || voiceIsSpeaking) return stopCurrentResponse();
+  if ($("send").textContent === "✨") { $("chatInput").focus(); setSendState("ready"); return; }
+  sendChatMessage();
 };
+$("chatInput").oninput = () => { if (!activeChatController && !voiceIsSpeaking) setSendState("ready"); };
+$("chatInput").onkeydown = e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    if (activeChatController || voiceIsSpeaking) stopCurrentResponse();
+    else sendChatMessage();
+  }
+};
+$("mic").onclick = openVoiceMode;
+$("voiceClose").onclick = closeVoiceMode;
+$("voiceStop").onclick = () => {
+  if (voiceIsListening && voiceRecognition) {
+    try { voiceRecognition.stop(); } catch {}
+    voiceRecognition = null;
+    voiceIsListening = false;
+    updateVoiceControls("Voice input stopped");
+  } else {
+    stopCurrentResponse();
+  }
+};
+$("voiceSend").onclick = () => {
+  if (voiceRecognition) {
+    try { voiceRecognition.stop(); } catch {}
+    voiceRecognition = null;
+  }
+  voiceIsListening = false;
+  const text = $("chatInput").value.trim();
+  if (!text) return updateVoiceControls("Say something first");
+  sendChatMessage();
+};
+
 
 function saveUsage() { localStorage.setItem("cc_usage", JSON.stringify(used)); updateUsage(); }
 function updateUsage() { $("iu").textContent = used.image + " / 30"; $("vu").textContent = used.video + " / 10"; $("im").style.width = Math.min(100, used.image / 30 * 100) + "%"; $("vm").style.width = Math.min(100, used.video / 10 * 100) + "%"; }
@@ -198,3 +376,7 @@ $("verifyOwner").onclick = async () => {
   finally { button.disabled = false; }
 };
 updateUsage();
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && voiceModeOpen) closeVoiceMode();
+});

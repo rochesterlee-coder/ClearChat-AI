@@ -19,3 +19,27 @@
 .history-row.selected .history-open,.history-open:hover{color:var(--text)}
 .history-delete{border:0;background:transparent;color:var(--muted);padding:5px 9px;border-radius:6px;cursor:pointer}
 .history-delete:hover{background:var(--panel2);color:var(--text)}
+
+/* ChatGPT-inspired voice mode and response controls */
+.send{transition:transform .15s ease,filter .15s ease;display:grid;place-items:center}
+.send-stop{background:#f05b68!important;color:white!important;font-size:13px!important}
+.voice-overlay{position:fixed;inset:0;z-index:80;background:rgba(5,8,16,.88);backdrop-filter:blur(18px);display:flex;align-items:flex-end;justify-content:center;padding:22px}
+.voice-overlay.hidden{display:none!important}
+.voice-bar{width:min(100%,1120px);min-height:76px;border:1px solid rgba(255,255,255,.13);border-radius:42px;background:rgba(255,255,255,.96);color:#101522;display:flex;align-items:center;gap:16px;padding:10px 12px;box-shadow:0 18px 70px #0006}
+.voice-round{width:52px;height:52px;flex:0 0 52px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.voice-close{background:#f1f2f5;color:#141923;font-size:30px;font-weight:300}
+.voice-stop{background:#f1f2f5;color:#101522}
+.voice-stop span{width:15px;height:15px;background:#111827;border-radius:4px}
+.voice-stop-active{background:#f1f2f5}
+.voice-send{background:#2864d7;color:white;font-size:29px;font-weight:400}
+.voice-center{min-width:0;flex:1;display:flex;align-items:center;gap:16px}
+.voice-wave{height:48px;display:flex;align-items:center;justify-content:center;gap:4px;flex:1;overflow:hidden}
+.voice-wave i{display:block;width:3px;height:4px;border-radius:4px;background:#aeb4c0;transition:height .2s}
+.voice-wave.active i{animation:voiceWave .72s ease-in-out infinite alternate}
+.voice-wave.active i:nth-child(3n){animation-delay:-.4s}
+.voice-wave.active i:nth-child(3n + 1){animation-delay:-.2s}
+.voice-wave.active i:nth-child(4n){animation-delay:-.6s}
+@keyframes voiceWave{from{height:5px}to{height:34px}}
+.voice-status{font-size:12px;color:#4d5667;white-space:nowrap}
+.voice-transcript{display:none}
+@media(max-width:600px){.voice-overlay{padding:12px}.voice-bar{gap:8px;padding:8px}.voice-round{width:46px;height:46px;flex-basis:46px}.voice-center{gap:7px}.voice-status{font-size:10px}.voice-wave{gap:2px}}
