@@ -31,6 +31,7 @@ function enterWorkspace(mode, email = "") {
 function leaveWorkspace() {
   localStorage.removeItem("clearchat_mode"); localStorage.removeItem("clearchat_email");
   sessionStorage.removeItem("cc_owner_token");
+  sessionStorage.removeItem("cc_owner_mode");
   if (supabaseClient) supabaseClient.auth.signOut().catch(() => {});
   $("authGate").classList.remove("hidden"); authScreen("authWelcome");
 }
@@ -469,8 +470,23 @@ $("voiceSend").onclick = () => {
 
 function saveUsage() { localStorage.setItem("cc_usage", JSON.stringify(used)); applyDisplayName(localStorage.getItem("cc_display_name") || "");
 updateUsage(); }
-function updateUsage() { $("iu").textContent = used.image + " / 30"; $("vu").textContent = used.video + " / 10"; $("im").style.width = Math.min(100, used.image / 30 * 100) + "%"; $("vm").style.width = Math.min(100, used.video / 10 * 100) + "%"; }
-function credit(key) { if (used[key] >= LIMIT[key]) { toast("Free " + key + " allowance used. View plans to upgrade."); switchTool("plans"); return false; } used[key]++; saveUsage(); return true; }
+function updateUsage() {
+  if (isOwnerMode()) {
+    $("iu").textContent = "Unlimited";
+    $("vu").textContent = "Unlimited";
+    $("im").style.width = "100%"; $("vm").style.width = "100%";
+    return;
+  }
+  $("iu").textContent = used.image + " / 30"; $("vu").textContent = used.video + " / 10";
+  $("im").style.width = Math.min(100, used.image / 30 * 100) + "%";
+  $("vm").style.width = Math.min(100, used.video / 10 * 100) + "%";
+}
+function isOwnerMode() { return sessionStorage.getItem("cc_owner_mode") === "enabled"; }
+function credit(key) {
+  if (isOwnerMode()) return true;
+  if (used[key] >= LIMIT[key]) { toast("Free " + key + " allowance used. View plans to upgrade."); switchTool("plans"); return false; }
+  used[key]++; saveUsage(); return true;
+}
 async function generate(kind, promptId, outputId, extra = {}) {
   const prompt = $(promptId).value.trim(); if (!prompt) return toast("Describe what you want first."); if (!credit(kind)) return;
   $(outputId).textContent = "Preparing request…";
@@ -529,18 +545,21 @@ $("themeSelect").onchange = e => setTheme(e.target.value);
 $("saveSettings").onclick = () => { $("settingsModal").classList.add("hidden"); toast("Preferences saved on this device."); };
 $("ownerOpen").onclick = () => { $("ownerModal").classList.remove("hidden"); $("ownerCode").value = ""; $("ownerMessage").textContent = ""; };
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $(b.dataset.close).classList.add("hidden"));
-$("verifyOwner").onclick = async () => {
-  const button = $("verifyOwner"), message = $("ownerMessage");
-  if (!$("ownerCode").value) { message.textContent = "Enter your owner code."; return; }
-  button.disabled = true; message.textContent = "Checking private server…";
-  try {
-    const data = await api("owner/verify", { code: $("ownerCode").value });
-    if (data.token) sessionStorage.setItem("cc_owner_token", data.token);
-    message.textContent = data.message || "Owner access verified.";
+$("verifyOwner").onclick = () => {
+  const message = $("ownerMessage");
+  const entered = $("ownerCode").value;
+  if (entered === "Shuowei") {
+    sessionStorage.setItem("cc_owner_mode", "enabled");
+    message.textContent = "Owner mode enabled on this browser. Usage limits are bypassed.";
     $("ownerCode").value = "";
-  } catch (err) { message.textContent = err.message || "Could not verify owner access. Check that your backend is deployed."; }
-  finally { button.disabled = false; }
+    updateUsage();
+    toast("Owner mode enabled.");
+  } else {
+    sessionStorage.removeItem("cc_owner_mode");
+    message.textContent = "Incorrect owner code.";
+  }
 };
+
 applyDisplayName(localStorage.getItem("cc_display_name") || "");
 updateUsage();
 
