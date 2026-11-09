@@ -1,45 +1,4 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ClearChat AI — Your AI workspace</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css"></head>
-<body data-theme="dark">
-
-  <div class="auth-gate" id="authGate">
-    <div class="auth-card">
-      <a class="brand auth-brand" href="#"><span class="brand-icon">C</span><span>ClearChat</span></a>
-      <div id="authWelcome">
-        <div class="overline">YOUR AI WORKSPACE STARTS HERE</div>
-        <h1>Make room for<br><span>what's possible.</span></h1>
-        <p>One place for ideas, answers, and getting things done.</p>
-        <button class="auth-choice" id="localChoice"><b>⌘　Proceed Without Email</b><small>Start right away on this device.</small><em>LOCAL DEVICE ONLY</em></button>
-        <div class="auth-or">OR</div>
-        <button class="auth-choice" id="emailChoice"><b>✉　Proceed With Email</b><small>Verify your email to set up your account.</small></button>
-        <p class="auth-foot">Choose how you want to get started.</p>
-      </div>
-      <div id="authLocal" class="hidden">
-        <button class="auth-back" data-auth-back>← Back</button>
-        <div class="overline">LOCAL DEVICE MODE</div><h2>Welcome to ClearChat.</h2>
-        <p>This mode stays on this browser and device. It does not sync across devices.</p>
-        <button class="primary-btn full" id="startLocal">Continue to ClearChat →</button>
-      </div>
-      <div id="authEmail" class="hidden">
-        <button class="auth-back" data-auth-back>← Back</button>
-        <div class="overline">ACCOUNT SIGN-UP</div><h2>Verify your email.</h2>
-        <p>Enter your email address. We'll send you a secure sign-in and verification link.</p>
-        <form id="emailForm">
-          <label for="email">Email address</label>
-          <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
-          <button class="primary-btn full" id="sendButton" type="submit">Send verification email →</button>
-        </form>
-        <p id="formMessage" class="auth-message" role="status"></p>
-      </div>
-      <div id="authVerified" class="hidden">
-        <div class="screen-icon success">✓</div><div class="overline">EMAIL VERIFIED</div>
-        <h2>You're verified.</h2><p>Your email confirmation was successful. Your ClearChat workspace is ready.</p>
-        <button class="primary-btn full" id="continueVerified">Continue to ClearChat →</button>
-      </div>
-    </div>
-  </div>
-<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -49,70 +8,78 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
+
 <body data-theme="dark">
 
 <div class="auth-gate" id="authGate">
-<div class="auth-card">
-<a class="brand auth-brand" href="#">
-<span class="brand-icon">C</span><span>ClearChat</span>
-</a>
+  <div class="auth-card">
+    <a class="brand auth-brand" href="#">
+      <span class="brand-icon">C</span>
+      <span>ClearChat</span>
+    </a>
 
-<div id="authWelcome">
-<div class="overline">YOUR AI WORKSPACE STARTS HERE</div>
-<h1>Make room for<br><span>what's possible.</span></h1>
-<p>One place for ideas, answers, and getting things done.</p>
+    <div id="authWelcome">
+      <div class="overline">YOUR AI WORKSPACE STARTS HERE</div>
+      <h1>Make room for<br><span>what's possible.</span></h1>
+      <p>One place for ideas, answers, and getting things done.</p>
 
-<button class="auth-choice" id="localChoice">
-<b>⌘　Proceed Without Email</b>
-<small>Start right away on this device.</small>
-<em>LOCAL DEVICE ONLY</em>
-</button>
+      <button class="auth-choice" id="localChoice">
+        <b>⌘　Proceed Without Email</b>
+        <small>Start right away on this device.</small>
+        <em>LOCAL DEVICE ONLY</em>
+      </button>
 
-<div class="auth-or">OR</div>
+      <div class="auth-or">OR</div>
 
-<button class="auth-choice" id="emailChoice">
-<b>✉　Proceed With Email</b>
-<small>Verify your email to set up your account.</small>
-</button>
-<p class="auth-foot">Choose how you want to get started.</p>
-</div>
+      <button class="auth-choice" id="emailChoice">
+        <b>✉　Proceed With Email</b>
+        <small>Verify your email to set up your account.</small>
+      </button>
 
-<div id="authLocal" class="hidden">
-<button class="auth-back" data-auth-back>← Back</button>
-<div class="overline">LOCAL DEVICE MODE</div>
-<h2>Welcome to ClearChat.</h2>
-<p>This mode stays on this browser and device. It does not sync across devices.</p>
-<button class="primary-btn full" id="startLocal">Continue to ClearChat →</button>
-</div>
+      <p class="auth-foot">Choose how you want to get started.</p>
+    </div>
 
-<div id="authEmail" class="hidden">
-<button class="auth-back" data-auth-back>← Back</button>
-<div class="overline">ACCOUNT SIGN-UP</div>
-<h2>Verify your email.</h2>
-<p>Enter your email address. We'll send you a secure sign-in and verification link.</p>
-<form id="emailForm">
-<label for="email">Email address</label>
-<input id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
-<button class="primary-btn full" id="sendButton" type="submit">Send verification email →</button>
-</form>
-<p id="formMessage" class="auth-message" role="status"></p>
-</div>
+    <div id="authLocal" class="hidden">
+      <button class="auth-back" data-auth-back>← Back</button>
+      <div class="overline">LOCAL DEVICE MODE</div>
+      <h2>Welcome to ClearChat.</h2>
+      <p>This mode stays on this browser and device. It does not sync across devices.</p>
+      <button class="primary-btn full" id="startLocal">Continue to ClearChat →</button>
+    </div>
 
-<div id="authVerified" class="hidden">
-<div class="screen-icon success">✓</div>
-<div class="overline">EMAIL VERIFIED</div>
-<h2>You're verified.</h2>
-<p>Your email confirmation was successful. Your ClearChat workspace is ready.</p>
-<button class="primary-btn full" id="continueVerified">Continue to ClearChat →</button>
-</div>
-</div>
+    <div id="authEmail" class="hidden">
+      <button class="auth-back" data-auth-back>← Back</button>
+      <div class="overline">ACCOUNT SIGN-UP</div>
+      <h2>Verify your email.</h2>
+      <p>Enter your email address. We'll send you a secure sign-in and verification link.</p>
+
+      <form id="emailForm">
+        <label for="email">Email address</label>
+        <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+        <button class="primary-btn full" id="sendButton" type="submit">Send verification email →</button>
+      </form>
+
+      <p id="formMessage" class="auth-message" role="status"></p>
+    </div>
+
+    <div id="authVerified" class="hidden">
+      <div class="screen-icon success">✓</div>
+      <div class="overline">EMAIL VERIFIED</div>
+      <h2>You're verified.</h2>
+      <p>Your email confirmation was successful. Your ClearChat workspace is ready.</p>
+      <button class="primary-btn full" id="continueVerified">Continue to ClearChat →</button>
+    </div>
+  </div>
 </div>
 
 <div class="layout">
+
 <aside class="sidebar" id="sidebar">
 
 <a class="brand" href="#"><span class="logo">C</span>ClearChat</a>
+
 <button class="newchat" id="newChat">＋ New chat</button>
+
 <p class="label">WORKSPACE</p>
 
 <nav>
@@ -147,9 +114,11 @@
 </div>
 
 <button class="nav" id="signOutButton">↪　Sign out</button>
+
 </aside>
 
 <main>
+
 <header>
 <button class="mobile" id="mobile">☰</button>
 <div>Workspace <span>/</span> <b id="crumb">AI Chat</b></div>
@@ -161,11 +130,13 @@
 
 <section id="chatView" class="view">
 <div class="chat">
+
 <div class="welcome" id="welcome">
 <div class="orb">✦</div>
 <small>YOUR AI WORKSPACE</small>
 <h1>What can we <em>create</em> today?</h1>
 <p>Ask questions, explore ideas, write, learn, and build.</p>
+
 <div class="chips">
 <button data-prompt="Explain quantum computing in simple words.">✧ Explain something</button>
 <button data-prompt="Help me plan a creative project.">▤ Plan a project</button>
@@ -177,9 +148,11 @@
 
 <div class="composer">
 <textarea id="chatInput" placeholder="Message ClearChat..." rows="2"></textarea>
+
 <div class="composebottom">
 <div>
 <button id="mic">🎙 Voice</button>
+
 <select id="voiceLang">
 <option value="en-US">English</option>
 <option value="ms-MY">Bahasa Melayu</option>
@@ -191,11 +164,14 @@
 <option value="fr-FR">Français</option>
 <option value="ar-SA">العربية</option>
 </select>
+
 <small id="status">Demo mode — AI backend not connected</small>
 </div>
+
 <button id="send" class="send">↑</button>
 </div>
 </div>
+
 <p class="fine">ClearChat can make mistakes. Check important information.</p>
 </div>
 </section>
@@ -206,9 +182,11 @@
 <h1>Image <em>Studio</em></h1>
 <p>Turn a description into a visual concept.</p>
 </div>
+
 <div class="card">
 <label>Describe the image you want</label>
 <textarea id="imagePrompt" placeholder="A cinematic floating city above the clouds at sunrise..."></textarea>
+
 <div class="controls">
 <select id="imageStyle">
 <option>Photorealistic</option>
@@ -219,8 +197,10 @@
 </select>
 <button id="makeImage">✦ Generate image · 1 credit</button>
 </div>
+
 <div class="output" id="imageOut">▧<b>Your creation will appear here</b><small>Image provider not connected yet.</small></div>
 </div>
+
 <p class="fine">Free plan: 30 image generations.</p>
 </section>
 
@@ -230,9 +210,11 @@
 <h1>Video <em>Studio</em></h1>
 <p>Describe a short video concept.</p>
 </div>
+
 <div class="card">
 <label>What should happen in your video?</label>
 <textarea id="videoPrompt" placeholder="A tiny robot walks through a glowing garden..."></textarea>
+
 <div class="controls">
 <select id="videoLength">
 <option>5 seconds</option>
@@ -241,8 +223,10 @@
 </select>
 <button id="makeVideo">▶ Generate video · 1 credit</button>
 </div>
+
 <div class="output" id="videoOut">▣<b>Your video will appear here</b><small>Video provider not connected yet.</small></div>
 </div>
+
 <p class="fine">Free plan: 10 video generations.</p>
 </section>
 
@@ -252,9 +236,11 @@
 <h1>Code <em>Studio</em></h1>
 <p>Describe a program, website, or feature.</p>
 </div>
+
 <div class="card">
 <label>What should the code do?</label>
 <textarea id="codePrompt" placeholder="Create a Python number guessing game..."></textarea>
+
 <div class="controls">
 <select id="codeLang">
 <option>Python</option>
@@ -266,8 +252,10 @@
 </select>
 <button id="makeCode">⌘ Generate code · 1 credit</button>
 </div>
+
 <pre id="codeOut" class="codeout hidden"><code></code><button id="copyCode">Copy</button></pre>
 </div>
+
 <p class="fine">Free plan: 50 code generations.</p>
 </section>
 
@@ -277,9 +265,11 @@
 <h1>Music <em>Studio</em></h1>
 <p>Describe the mood, genre, and instruments.</p>
 </div>
+
 <div class="card">
 <label>Describe your song</label>
 <textarea id="musicPrompt" placeholder="An uplifting electronic instrumental with warm piano..."></textarea>
+
 <div class="controls">
 <select id="genre">
 <option>Electronic</option>
@@ -291,8 +281,10 @@
 </select>
 <button id="makeMusic">♫ Create song · 1 credit</button>
 </div>
+
 <div class="output" id="musicOut">♫<b>Your song will appear here</b><small>Music provider not connected yet.</small></div>
 </div>
+
 <p class="fine">Free plan: 20 songs.</p>
 </section>
 
@@ -302,13 +294,17 @@
 <h1>Browser <em>Assistant</em></h1>
 <p>Describe a browser task and review its proposed steps.</p>
 </div>
+
 <div class="card">
 <div class="notice">◎ <span><b>You stay in control.</b> ClearChat previews actions and asks approval. Never use automation with passwords, payments, or private data.</span></div>
+
 <label>What would you like help doing?</label>
 <textarea id="browserPrompt" placeholder="Help me find the settings button on this page..."></textarea>
+
 <button id="planBrowser" class="wide">⌖ Create action plan · 1 prompt</button>
 <div id="browserOut" class="plan hidden"></div>
 </div>
+
 <p class="fine">Free plan: 10 browser prompts. This starter does not move your mouse or control other websites.</p>
 </section>
 
@@ -318,9 +314,12 @@
 <h1>Choose your <em>plan</em></h1>
 <p>Start free, upgrade when you need more.</p>
 </div>
+
 <div id="plans" class="plans"></div>
+
 <p class="fine">Prices in MYR per month. Checkout is not connected yet.</p>
 </section>
+
 </main>
 </div>
 
@@ -329,6 +328,7 @@
 <button class="close" data-close="settingsModal">×</button>
 <small>PREFERENCES</small>
 <h2>Settings</h2>
+
 <label>Appearance</label>
 <select id="themeSelect">
 <option value="dark">Dark</option>
@@ -337,6 +337,7 @@
 <option value="white">Pure white</option>
 <option value="midnight">Midnight purple</option>
 </select>
+
 <label>Interface language</label>
 <select id="uiLanguage">
 <option>English</option>
@@ -349,7 +350,9 @@
 <option>Français</option>
 <option>العربية</option>
 </select>
+
 <p>Language preference preview. Full translations and multilingual AI responses need backend integration.</p>
+
 <button id="saveSettings" class="wide">Save preferences</button>
 </div>
 </div>
@@ -360,10 +363,13 @@
 <small>RESTRICTED AREA</small>
 <h2>Owner access</h2>
 <p>Owner code is checked by a private server. It is not stored in this public website.</p>
+
 <label>Owner code</label>
 <input id="ownerCode" type="password" placeholder="Enter owner code">
+
 <button id="verifyOwner" class="wide">Verify owner</button>
 <p id="ownerMessage"></p>
+
 <small>Two incorrect attempts trigger a 24-hour lockout when server protection is deployed.</small>
 </div>
 </div>
@@ -377,22 +383,3 @@
 
 </body>
 </html>
-
-<div class="layout">
-<aside class="sidebar" id="sidebar"><a class="brand" href="#"><span class="logo">C</span>ClearChat</a><button class="newchat" id="newChat">＋ New chat</button><p class="label">WORKSPACE</p>
-<nav><button class="nav active" data-tool="chat">◉　AI Chat</button><button class="nav" data-tool="image">▧　Image Studio <small>30</small></button><button class="nav" data-tool="video">▣　Video Studio <small>10</small></button><button class="nav" data-tool="code">&lt;/&gt;　Code Studio <small>50</small></button><button class="nav" data-tool="music">♫　Music Studio <small>20</small></button><button class="nav" data-tool="browser">⌖　Browser Assistant <small>10</small></button></nav>
-<div class="grow"></div><div class="usage"><b>FREE PLAN <span>ACTIVE</span></b><p>Images <strong id="iu">0 / 30</strong></p><div class="meter"><i id="im"></i></div><p>Videos <strong id="vu">0 / 10</strong></p><div class="meter"><i id="vm"></i></div><button data-tool="plans">Upgrade plan ↗</button></div>
-<button class="nav" id="settingsOpen">⚙　Settings</button><button class="nav" id="ownerOpen">♙　Owner access</button><div class="profile"><span class="avatar">C</span><span><b id="accountLabel">Guest workspace</b><small id="profilePlan">Free plan · Local device</small></span></div><button class="nav" id="signOutButton">↪　Sign out</button></aside>
-<main><header><button class="mobile" id="mobile">☰</button><div>Workspace <span>/</span> <b id="crumb">AI Chat</b></div><div class="right"><button id="themeQuick" class="icon">◐</button><button class="upgrade" data-tool="plans">Upgrade ✦</button></div></header>
-<section id="chatView" class="view"><div class="chat"><div class="welcome" id="welcome"><div class="orb">✦</div><small>YOUR AI WORKSPACE</small><h1>What can we <em>create</em> today?</h1><p>Ask questions, explore ideas, write, learn, and build.</p><div class="chips"><button data-prompt="Explain quantum computing in simple words.">✧ Explain something</button><button data-prompt="Help me plan a creative project.">▤ Plan a project</button><button data-prompt="Write a Python Hello World program.">⌘ Write code</button></div></div><div id="messages"></div>
-<div class="composer"><textarea id="chatInput" placeholder="Message ClearChat..." rows="2"></textarea><div class="composebottom"><div><button id="mic">🎙 Voice</button><select id="voiceLang"><option value="en-US">English</option><option value="ms-MY">Bahasa Melayu</option><option value="zh-CN">中文</option><option value="ta-IN">தமிழ்</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="es-ES">Español</option><option value="fr-FR">Français</option><option value="ar-SA">العربية</option></select><small id="status">Demo mode — AI backend not connected</small></div><button id="send" class="send">↑</button></div></div><p class="fine">ClearChat can make mistakes. Check important information.</p></div></section>
-<section id="imageView" class="view hidden"><div class="heading"><small>VISUAL CREATION</small><h1>Image <em>Studio</em></h1><p>Turn a description into a visual concept.</p></div><div class="card"><label>Describe the image you want</label><textarea id="imagePrompt" placeholder="A cinematic floating city above the clouds at sunrise..."></textarea><div class="controls"><select id="imageStyle"><option>Photorealistic</option><option>3D cartoon</option><option>Anime</option><option>Watercolour</option><option>Minimalist</option></select><button id="makeImage">✦ Generate image · 1 credit</button></div><div class="output" id="imageOut">▧<b>Your creation will appear here</b><small>Image provider not connected yet.</small></div></div><p class="fine">Free plan: 30 image generations.</p></section>
-<section id="videoView" class="view hidden"><div class="heading"><small>MOTION CREATION</small><h1>Video <em>Studio</em></h1><p>Describe a short video concept.</p></div><div class="card"><label>What should happen in your video?</label><textarea id="videoPrompt" placeholder="A tiny robot walks through a glowing garden..."></textarea><div class="controls"><select id="videoLength"><option>5 seconds</option><option>10 seconds</option><option>15 seconds</option></select><button id="makeVideo">▶ Generate video · 1 credit</button></div><div class="output" id="videoOut">▣<b>Your video will appear here</b><small>Video provider not connected yet.</small></div></div><p class="fine">Free plan: 10 video generations.</p></section>
-<section id="codeView" class="view hidden"><div class="heading"><small>DEVELOPMENT</small><h1>Code <em>Studio</em></h1><p>Describe a program, website, or feature.</p></div><div class="card"><label>What should the code do?</label><textarea id="codePrompt" placeholder="Create a Python number guessing game..."></textarea><div class="controls"><select id="codeLang"><option>Python</option><option>JavaScript</option><option>HTML / CSS</option><option>Java</option><option>C++</option><option>SQL</option></select><button id="makeCode">⌘ Generate code · 1 credit</button></div><pre id="codeOut" class="codeout hidden"><code></code><button id="copyCode">Copy</button></pre></div><p class="fine">Free plan: 50 code generations.</p></section>
-<section id="musicView" class="view hidden"><div class="heading"><small>AUDIO CREATION</small><h1>Music <em>Studio</em></h1><p>Describe the mood, genre, and instruments.</p></div><div class="card"><label>Describe your song</label><textarea id="musicPrompt" placeholder="An uplifting electronic instrumental with warm piano..."></textarea><div class="controls"><select id="genre"><option>Electronic</option><option>Pop</option><option>Ambient</option><option>Orchestral</option><option>Lo-fi</option><option>Rock</option></select><button id="makeMusic">♫ Create song · 1 credit</button></div><div class="output" id="musicOut">♫<b>Your song will appear here</b><small>Music provider not connected yet.</small></div></div><p class="fine">Free plan: 20 songs.</p></section>
-<section id="browserView" class="view hidden"><div class="heading"><small>ASSISTED BROWSING</small><h1>Browser <em>Assistant</em></h1><p>Describe a browser task and review its proposed steps.</p></div><div class="card"><div class="notice">◎ <span><b>You stay in control.</b> ClearChat previews actions and asks approval. Never use automation with passwords, payments, or private data.</span></div><label>What would you like help doing?</label><textarea id="browserPrompt" placeholder="Help me find the settings button on this page..."></textarea><button id="planBrowser" class="wide">⌖ Create action plan · 1 prompt</button><div id="browserOut" class="plan hidden"></div></div><p class="fine">Free plan: 10 browser prompts. This starter does not move your mouse or control other websites.</p></section>
-<section id="plansView" class="view hidden"><div class="heading center"><small>CLEARCHAT MEMBERSHIPS</small><h1>Choose your <em>plan</em></h1><p>Start free, upgrade when you need more.</p></div><div id="plans" class="plans"></div><p class="fine">Prices in MYR per month. Checkout is not connected yet.</p></section>
-</main></div>
-<div id="settingsModal" class="backdrop hidden"><div class="modal"><button class="close" data-close="settingsModal">×</button><small>PREFERENCES</small><h2>Settings</h2><label>Appearance</label><select id="themeSelect"><option value="dark">Dark</option><option value="black">Pure black</option><option value="light">Light</option><option value="white">Pure white</option><option value="midnight">Midnight purple</option></select><label>Interface language</label><select id="uiLanguage"><option>English</option><option>Bahasa Melayu</option><option>中文</option><option>தமிழ்</option><option>日本語</option><option>한국어</option><option>Español</option><option>Français</option><option>العربية</option></select><p>Language preference preview. Full translations and multilingual AI responses need backend integration.</p><button id="saveSettings" class="wide">Save preferences</button></div></div>
-<div id="ownerModal" class="backdrop hidden"><div class="modal"><button class="close" data-close="ownerModal">×</button><small>RESTRICTED AREA</small><h2>Owner access</h2><p>Owner code is checked by a private server. It is not stored in this public website.</p><label>Owner code</label><input id="ownerCode" type="password" placeholder="Enter owner code"><button id="verifyOwner" class="wide">Verify owner</button><p id="ownerMessage"></p><small>Two incorrect attempts trigger a 24-hour lockout when server protection is deployed.</small></div></div><div id="toast"></div>
-<script src="app.js"></script></body></html>
