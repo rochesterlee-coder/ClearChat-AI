@@ -168,3 +168,10 @@ header { flex:0 0 65px; }
 .danger-outline { border:1px solid #e47b89 !important; color:#ff9aa7 !important; background:transparent !important; }
 .danger { background:#b8324b !important; color:white !important; border:0; }
 .best-deal-tag { white-space:nowrap; }
+
+.free-limit-notice { margin:10px auto 0; max-width:820px; padding:12px 16px; border:1px solid #8060aa; border-radius:12px; background:rgba(155,110,220,.12); color:var(--text, #f5edff); font-size:13px; line-height:1.5; text-align:center; }
+.free-limit-notice.hidden { display:none !important; }
+
+#locationSetup label { display:block; margin:14px 0 6px; font-weight:600; }
+#locationSetup select { width:100%; min-height:44px; padding:10px 12px; border-radius:10px; }
+#locationSetup .primary-btn { margin-top:20px; }

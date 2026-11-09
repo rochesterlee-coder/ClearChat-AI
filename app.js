@@ -12,6 +12,7 @@ const PLAN_LIMITS = {
 let currentPlan = PLAN_LIMITS[localStorage.getItem("cc_plan")] ? localStorage.getItem("cc_plan") : "Free";
 let LIMIT = PLAN_LIMITS[currentPlan];
 let used = JSON.parse(localStorage.getItem("cc_usage") || '{"image":0,"video":0,"browser":0,"code":0,"music":0}');
+let usageResetAt = Number(localStorage.getItem("cc_usage_reset_at") || 0);
 let supabaseClient = null, recognition = null, toastTimer = null;
 let chats = JSON.parse(localStorage.getItem("cc_chats") || "[]");
 let currentChatId = null;
@@ -29,6 +30,40 @@ function toast(message) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
 }
 function authScreen(id) { ["authWelcome", "authLocal", "authEmail", "authVerified"].forEach(x => $(x)?.classList.toggle("hidden", x !== id)); }
+const COUNTRY_CODES = "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW".split(" ");
+const regionNames = new Intl.DisplayNames([navigator.language || "en"], { type: "region" });
+function setupLocationPicker() {
+  const country = $("countrySelect"), zone = $("timezoneSelect");
+  if (!country || !zone || country.options.length) return;
+  COUNTRY_CODES.map(code => [regionNames.of(code), code]).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([name,code]) => {
+    const option=document.createElement("option"); option.value=code; option.textContent=name; country.appendChild(option);
+  });
+  const zones = Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : ["Etc/UTC"];
+  zones.forEach(tz => { const o=document.createElement("option"); o.value=tz; o.textContent=tz.replaceAll("_"," "); zone.appendChild(o); });
+  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC";
+  zone.value = detected;
+  const detectedCountry = detected === "Asia/Kuala_Lumpur" ? "MY" : detected.split("/")[0] === "America" ? "US" : detected.split("/")[0] === "Europe" ? "GB" : "MY";
+  country.value = detectedCountry;
+  const saved = localStorage.getItem("cc_timezone");
+  if (saved && zones.includes(saved)) zone.value = saved;
+  const savedCountry = localStorage.getItem("cc_country");
+  if (savedCountry && COUNTRY_CODES.includes(savedCountry)) country.value=savedCountry;
+}
+function showStartupLocation() {
+  setupLocationPicker();
+  const saved = localStorage.getItem("cc_timezone");
+  if (saved) authScreen("authWelcome");
+  else { ["authWelcome","authLocal","authEmail","authVerified"].forEach(id=>$(id)?.classList.add("hidden")); $("locationSetup")?.classList.remove("hidden"); }
+}
+$("saveLocation")?.addEventListener("click", () => {
+  const country=$("countrySelect")?.value, timezone=$("timezoneSelect")?.value;
+  if (!country || !timezone) return toast("Choose your country and time zone first.");
+  localStorage.setItem("cc_country",country);
+  localStorage.setItem("cc_timezone",timezone);
+  $("locationSetup")?.classList.add("hidden");
+  authScreen("authWelcome");
+});
+
 function enterWorkspace(mode, email = "") {
   $("authGate").classList.add("hidden");
   $("accountLabel").textContent = email || "Local workspace";
@@ -65,6 +100,7 @@ $("continueVerified").onclick = async () => {
 $("signOutButton").onclick = leaveWorkspace;
 
 (async () => {
+  showStartupLocation();
   if (supabaseClient) {
     const { data } = await supabaseClient.auth.getSession();
     if (data.session?.user) { enterWorkspace("email", data.session.user.email || ""); if (location.search || location.hash) history.replaceState({}, document.title, location.pathname); }
@@ -588,12 +624,55 @@ function updateUsage() {
   const profile = $("profilePlan");
   if (profile) profile.textContent = owner ? "Owner access · Unlimited" : currentPlan + " plan";
   if (typeof refreshSubscriptionUI === "function") refreshSubscriptionUI();
+  $("cancelAdminAccess")?.classList.toggle("hidden", !owner);
+  resetExpiredUsageWindow();
+  refreshFreeLimitNotice();
 }
 function isOwnerMode() { return sessionStorage.getItem("cc_owner_mode") === "enabled"; }
+function formatResetTime(timestamp) {
+  const date = new Date(timestamp);
+  const timezone = localStorage.getItem("cc_timezone") || Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC";
+  const locale = navigator.language || "en";
+  const time = date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", timeZone: timezone });
+  const day = date.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: timezone });
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: timezone });
+  return day === tomorrow ? `${time} tomorrow` : `${time} on ${day}`;
+}
+function refreshFreeLimitNotice() {
+  const notice = $("freeLimitNotice");
+  if (!notice) return;
+  const show = !isOwnerMode() && currentPlan === "Free" && usageResetAt > Date.now();
+  notice.classList.toggle("hidden", !show);
+  if (show) notice.textContent = `Free Plan Limit Reached. Your limits refresh at ${formatResetTime(usageResetAt)} (${timezone.replaceAll("_"," ")} time).`;
+}
+function resetExpiredUsageWindow() {
+  if (usageResetAt && Date.now() >= usageResetAt) {
+    used = { image:0, video:0, browser:0, code:0, music:0 };
+    usageResetAt = 0;
+    localStorage.setItem("cc_usage", JSON.stringify(used));
+    localStorage.removeItem("cc_usage_reset_at");
+  }
+  refreshFreeLimitNotice();
+}
 function credit(key) {
+  resetExpiredUsageWindow();
   if (isOwnerMode()) return true;
-  if (used[key] >= LIMIT[key]) { toast("Free " + key + " allowance used. View plans to upgrade."); switchTool("plans"); return false; }
-  used[key]++; saveUsage(); return true;
+  if (used[key] >= LIMIT[key]) {
+    if (currentPlan === "Free" && !usageResetAt) {
+      usageResetAt = Date.now() + 24 * 60 * 60 * 1000;
+      localStorage.setItem("cc_usage_reset_at", String(usageResetAt));
+    }
+    refreshFreeLimitNotice();
+    toast((currentPlan === "Free" ? "Free plan limit reached." : currentPlan + " plan limit reached.") + " Check the notice below the chat.");
+    return false;
+  }
+  used[key]++;
+  if (currentPlan === "Free" && used[key] >= LIMIT[key] && !usageResetAt) {
+    usageResetAt = Date.now() + 24 * 60 * 60 * 1000;
+    localStorage.setItem("cc_usage_reset_at", String(usageResetAt));
+  }
+  saveUsage();
+  return true;
 }
 async function generate(kind, promptId, outputId, extra = {}) {
   const prompt = $(promptId).value.trim(); if (!prompt) return toast("Describe what you want first."); if (!credit(kind)) return;
@@ -741,6 +820,15 @@ $("themeSelect").onchange = e => setTheme(e.target.value);
 $("saveSettings").onclick = () => { $("settingsModal").classList.add("hidden"); toast("Preferences saved on this device."); };
 $("ownerOpen").onclick = () => { $("ownerModal").classList.remove("hidden"); $("ownerCode").value = ""; $("ownerMessage").textContent = ""; };
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $(b.dataset.close).classList.add("hidden"));
+$("cancelAdminAccess")?.addEventListener("click", () => {
+  sessionStorage.removeItem("cc_owner_mode");
+  sessionStorage.removeItem("cc_owner_token");
+  $("ownerMessage").textContent = "Owner access has been turned off for this browser.";
+  $("ownerModal")?.classList.add("hidden");
+  updateUsage();
+  toast("Admin mode cancelled. Your normal plan limits are active.");
+});
+
 $("verifyOwner").onclick = () => {
   const message = $("ownerMessage");
   const entered = $("ownerCode").value;

@@ -6,6 +6,16 @@
   <div class="auth-gate" id="authGate">
     <div class="auth-card">
       <a class="brand auth-brand" href="#"><span class="brand-icon">C</span><span>ClearChat</span></a>
+      <div id="locationSetup" class="hidden">
+        <div class="overline">PERSONALIZE YOUR TIME</div>
+        <h2>Where do you live?</h2>
+        <p>Choose your country or region and time zone. ClearChat uses this to show your daily limit reset time correctly.</p>
+        <label for="countrySelect">Country or region</label>
+        <select id="countrySelect"></select>
+        <label for="timezoneSelect">Time zone</label>
+        <select id="timezoneSelect"></select>
+        <button class="primary-btn full" id="saveLocation">Continue →</button>
+      </div>
       <div id="authWelcome">
         <div class="overline">YOUR AI WORKSPACE STARTS HERE</div>
         <h1>Make room for<br><span>what's possible.</span></h1>
@@ -78,6 +88,7 @@
 </div>
 <button class="nav" id="settingsOpen">⚙　Settings</button>
 <button class="nav" id="ownerOpen">♙　Owner access</button>
+<button class="nav hidden" id="cancelAdminAccess">↩　Cancel admin access</button>
 
 <div class="profile">
 <span class="avatar">C</span>
@@ -150,6 +161,7 @@
 </div>
 </div>
 <p class="fine">ClearChat can make mistakes. Check important information.</p>
+<div id="freeLimitNotice" class="free-limit-notice hidden" role="status" aria-live="polite"></div>
 </div>
 </section>
 
