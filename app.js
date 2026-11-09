@@ -103,14 +103,31 @@ function renderProjects() {
   all.onclick = () => { activeProjectFilter = null; renderProjects(); renderHistory(); };
   host.appendChild(all);
   projects.forEach(project => {
+    const row = document.createElement("div"); row.className = "project-row";
     const item = document.createElement("button");
     item.className = "project-item" + (activeProjectFilter === project.id ? " active" : "");
-    item.textContent = "▰  " + project.name;
-    item.title = project.name;
+    item.textContent = "▰  " + project.name; item.title = project.name;
     item.onclick = () => { activeProjectFilter = project.id; renderProjects(); renderHistory(); };
-    host.appendChild(item);
+    const more = document.createElement("button"); more.className = "project-more"; more.textContent = "•••"; more.title = "Project options";
+    more.onclick = e => {
+      e.stopPropagation();
+      const choice = prompt("Project options: type R to rename or D to delete", "R");
+      if (!choice) return;
+      if (choice.toLowerCase() === "r") {
+        const name = prompt("Rename project:", project.name);
+        if (name && name.trim()) { project.name = name.trim().slice(0,40); saveProjects(); renderHistory(); toast("Project renamed."); }
+      } else if (choice.toLowerCase() === "d") {
+        if (!confirm(`Delete project \"${project.name}\"? Chats will stay in All projects.`)) return;
+        projects = projects.filter(x => x.id !== project.id);
+        chats.forEach(chat => { if (chat.projectId === project.id) delete chat.projectId; });
+        if (activeProjectFilter === project.id) activeProjectFilter = null;
+        saveChats(); saveProjects(); renderHistory(); toast("Project deleted. Chats were kept.");
+      }
+    };
+    row.append(item, more); host.appendChild(row);
   });
 }
+
 function createProject() {
   const name = prompt("Name your project:");
   if (!name || !name.trim()) return;
@@ -221,21 +238,35 @@ function renderCurrentChat() {
   $("temporaryChatNotice")?.classList.toggle("hidden", !chat?.temporary);
   $("welcome").classList.toggle("hidden", !!(chat && chat.messages.length));
   if (!chat) return;
-  chat.messages.forEach(m => appendMessageElement(m.text, m.who));
+  chat.messages.forEach(m => appendMessageElement(m.text, m.who, m.attachments || []));
 }
 function loadLatestChat() {
   const latest = chats.slice().sort((a, b) => b.updatedAt - a.updatedAt)[0];
   currentChatId = latest?.id || null; renderCurrentChat();
 }
-function appendMessageElement(text, who) {
-  const div = document.createElement("div"); div.className = "message " + who; div.textContent = text;
+function appendMessageElement(text, who, attachments = []) {
+  const div = document.createElement("div"); div.className = "message " + who;
+  if (text) { const body = document.createElement("div"); body.textContent = text; div.appendChild(body); }
+  if (attachments.length) {
+    const list = document.createElement("div"); list.className = "message-attachments";
+    attachments.forEach(file => {
+      const item = document.createElement("div"); item.className = "message-file";
+      if (file.type && file.type.startsWith("image/") && file.id) {
+        getStoredAttachment(file.id).then(blob => { if (blob) { const img = document.createElement("img"); img.src = URL.createObjectURL(blob); img.alt = file.name; item.prepend(img); } });
+      }
+      const label = document.createElement("span"); label.textContent = file.name + (file.size ? " · " + formatFileSize(file.size) : ""); item.appendChild(label); list.appendChild(item);
+    });
+    div.appendChild(list);
+  }
   $("messages").appendChild(div); div.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
-function addMessage(text, who) {
+function formatFileSize(bytes) { if (bytes < 1024) return bytes + " B"; if (bytes < 1048576) return (bytes/1024).toFixed(1)+" KB"; return (bytes/1048576).toFixed(1)+" MB"; }
+
+function addMessage(text, who, attachments = []) {
   let chat = currentChat() || makeChat();
-  chat.messages.push({ text, who, at: Date.now() }); chat.updatedAt = Date.now();
-  if (who === "user" && chat.title === "New chat") chat.title = text.slice(0, 36) + (text.length > 36 ? "…" : "");
-  $("welcome").classList.add("hidden"); appendMessageElement(text, who);
+  chat.messages.push({ text, who, attachments, at: Date.now() }); chat.updatedAt = Date.now();
+  if (who === "user" && chat.title === "New chat") { const title = text || (attachments[0]?.name || "Attached files"); chat.title = title.slice(0, 36) + (title.length > 36 ? "…" : ""); }
+  $("welcome").classList.add("hidden"); appendMessageElement(text, who, attachments);
   if (chat.temporary) renderHistory(); else saveChats();
 }
 $("newChat").onclick = () => { makeChat(false); $("chatInput").value = ""; switchTool("chat"); $("chatInput").focus(); };
@@ -408,11 +439,67 @@ function closeVoiceMode() {
 // Voice input is speech-to-text only. ClearChat does not read replies aloud.
 function speakReply() {}
 
+// Attachments are kept in the current browser's local chat history.
+let pendingAttachments = [];
+let attachmentDBPromise;
+function attachmentDB() {
+  if (!window.indexedDB) return Promise.reject(new Error("This browser does not support local file storage."));
+  if (!attachmentDBPromise) attachmentDBPromise = new Promise((resolve,reject) => {
+    const request = indexedDB.open("ClearChatAttachments",1);
+    request.onupgradeneeded = () => request.result.createObjectStore("files", { keyPath:"id" });
+    request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+  });
+  return attachmentDBPromise;
+}
+async function storeAttachment(id, blob) {
+  const db = await attachmentDB();
+  return new Promise((resolve,reject) => { const tx=db.transaction("files","readwrite"); tx.objectStore("files").put({id,blob}); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); });
+}
+async function getStoredAttachment(id) {
+  const db = await attachmentDB();
+  return new Promise((resolve,reject) => { const req=db.transaction("files","readonly").objectStore("files").get(id); req.onsuccess=()=>resolve(req.result?.blob || null); req.onerror=()=>reject(req.error); });
+}
+function renderPendingAttachments() {
+  const host = $("attachmentPreview"); if (!host) return; host.innerHTML = "";
+  pendingAttachments.forEach((file, index) => {
+    const chip = document.createElement("div"); chip.className = "attachment-chip";
+    const name = document.createElement("span"); name.textContent = file.name;
+    const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "×"; remove.title = "Remove attachment";
+    remove.onclick = () => { pendingAttachments.splice(index,1); renderPendingAttachments(); };
+    chip.append(name, remove); host.appendChild(chip);
+  });
+  host.classList.toggle("hidden", !pendingAttachments.length);
+}
+function addFiles(fileList) {
+  const files = Array.from(fileList || []);
+  const maxFileSize = 15 * 1024 * 1024;
+  files.forEach(file => {
+    if (file.size > maxFileSize) { toast(file.name + " is over 15 MB and was skipped."); return; }
+    if (pendingAttachments.length >= 10) { toast("You can attach up to 10 files per message."); return; }
+    const id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+    storeAttachment(id, file).then(() => {
+      pendingAttachments.push({ id, name:file.name, type:file.type || "application/octet-stream", size:file.size });
+      renderPendingAttachments();
+    }).catch(() => toast("Could not store " + file.name + " in this browser."));
+  });
+}
+$("attachButton")?.addEventListener("click", () => $("filePicker").click());
+$("filePicker")?.addEventListener("change", e => { addFiles(e.target.files); e.target.value = ""; });
+$("chatInput")?.addEventListener("paste", e => {
+  const items = Array.from(e.clipboardData?.items || []);
+  const images = items.filter(item => item.kind === "file" && item.type.startsWith("image/")).map(item => item.getAsFile()).filter(Boolean);
+  if (images.length) { e.preventDefault(); addFiles(images); toast("Screenshot pasted as an attachment."); }
+});
+$("chatInput")?.addEventListener("dragover", e => e.preventDefault());
+$("chatInput")?.addEventListener("drop", e => { e.preventDefault(); addFiles(e.dataTransfer?.files); });
+
 async function sendChatMessage() {
   const prompt = $("chatInput").value.trim();
-  if (!prompt || activeChatController) return;
+  if ((!prompt && !pendingAttachments.length) || activeChatController) return;
+  const attached = pendingAttachments.slice(); pendingAttachments = []; renderPendingAttachments();
   $("chatInput").value = "";
-  addMessage(prompt, "user");
+  addMessage(prompt, "user", attached);
+  if (!prompt && attached.length) { addMessage("Files are attached to this chat. File understanding needs the ClearChat AI backend to be connected.", "assistant"); return; }
   $("status").textContent = "Thinking…";
   setSendState("busy");
   activeChatController = new AbortController();
@@ -471,15 +558,19 @@ $("voiceSend").onclick = () => {
 function saveUsage() { localStorage.setItem("cc_usage", JSON.stringify(used)); applyDisplayName(localStorage.getItem("cc_display_name") || "");
 updateUsage(); }
 function updateUsage() {
-  if (isOwnerMode()) {
-    $("iu").textContent = "Unlimited";
-    $("vu").textContent = "Unlimited";
-    $("im").style.width = "100%"; $("vm").style.width = "100%";
-    return;
-  }
-  $("iu").textContent = used.image + " / 30"; $("vu").textContent = used.video + " / 10";
-  $("im").style.width = Math.min(100, used.image / 30 * 100) + "%";
-  $("vm").style.width = Math.min(100, used.video / 10 * 100) + "%";
+  const items = [
+    ["image", "iu", "im", 30], ["video", "vu", "vm", 10],
+    ["browser", "bu", "bm", 10], ["code", "cu", "cm", 50],
+    ["music", "mu", "mm", 20]
+  ];
+  const owner = isOwnerMode();
+  const title = $("usagePlanTitle");
+  if (title) title.childNodes[0].textContent = owner ? "OWNER ACCESS " : "FREE PLAN ";
+  items.forEach(([key, valueId, meterId, limit]) => {
+    const value = $(valueId), meter = $(meterId);
+    if (value) value.textContent = owner ? "Unlimited" : used[key] + " / " + limit;
+    if (meter) meter.style.width = owner ? "100%" : Math.min(100, used[key] / limit * 100) + "%";
+  });
 }
 function isOwnerMode() { return sessionStorage.getItem("cc_owner_mode") === "enabled"; }
 function credit(key) {

@@ -68,9 +68,14 @@
 <div class="grow"></div>
 
 <div class="usage">
-<b>FREE PLAN <span>ACTIVE</span></b>
-<p>Images <strong id="iu">0 / 30</strong></p>
-<div class="meter"><i id="im"></i></div>
+<b id="usagePlanTitle">FREE PLAN <span id="usagePlanState">ACTIVE</span></b>
+<p>Images <strong id="iu">0 / 30</strong></p><div class="meter"><i id="im"></i></div>
+<p>Videos <strong id="vu">0 / 10</strong></p><div class="meter"><i id="vm"></i></div>
+<p>Browser Assistant <strong id="bu">0 / 10</strong></p><div class="meter"><i id="bm"></i></div>
+<p>Code Studio <strong id="cu">0 / 50</strong></p><div class="meter"><i id="cm"></i></div>
+<p>Music Studio <strong id="mu">0 / 20</strong></p><div class="meter"><i id="mm"></i></div>
+<button data-tool="plans">Upgrade plan ↗</button>
+</div>
 <p>Videos <strong id="vu">0 / 10</strong></p>
 <div class="meter"><i id="vm"></i></div>
 <button data-tool="plans">Upgrade plan ↗</button>
@@ -128,7 +133,8 @@
   <button id="voiceSend" class="voice-round voice-send" aria-label="Send transcribed message">↑</button>
 </div>
 
-<textarea id="chatInput" placeholder="Message ClearChat..." rows="2"></textarea>
+<div id="attachmentPreview" class="attachment-preview hidden"></div>
+<div class="composer-input-row"><button id="attachButton" class="attach-button" type="button" title="Add files" aria-label="Add files">＋</button><input id="filePicker" type="file" multiple hidden><textarea id="chatInput" placeholder="Message ClearChat..." rows="2"></textarea></div>
 <div class="composebottom">
 <div>
 <button id="mic">🎙 Voice</button>
