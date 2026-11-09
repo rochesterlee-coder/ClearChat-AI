@@ -242,31 +242,14 @@ function closeVoiceMode() {
   }
   voiceIsListening = false;
   voiceModeOpen = false;
+  const transcript = $("voiceTranscript").textContent.trim() || voiceTranscript.trim();
+  if (transcript) $("chatInput").value = transcript;
   $("voiceOverlay").classList.add("hidden");
   updateVoiceControls("");
 }
-function speakReply(text) {
-  if (!voiceModeOpen || !("speechSynthesis" in window) || !text) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = $("voiceLang").value;
-  utterance.onstart = () => {
-    voiceIsSpeaking = true;
-    updateVoiceControls("ClearChat is speaking…");
-    setSendState("busy");
-  };
-  utterance.onend = () => {
-    voiceIsSpeaking = false;
-    updateVoiceControls("Finished");
-    setSendState("done");
-  };
-  utterance.onerror = () => {
-    voiceIsSpeaking = false;
-    updateVoiceControls("Speech playback ended");
-    setSendState("done");
-  };
-  window.speechSynthesis.speak(utterance);
-}
+// Voice input is speech-to-text only. ClearChat does not read replies aloud.
+function speakReply() {}
+
 async function sendChatMessage() {
   const prompt = $("chatInput").value.trim();
   if (!prompt || activeChatController) return;
@@ -287,14 +270,14 @@ async function sendChatMessage() {
     if (!response.ok) throw new Error(data.error || data.message || `Request failed (${response.status})`);
     const reply = data.reply || "No reply returned.";
     addMessage(reply, "assistant");
-    speakReply(reply);
+
   } catch (err) {
     if (err.name === "AbortError") {
       addMessage("Response stopped.", "assistant");
     } else {
       const reply = "ClearChat's AI is not connected yet. Your message has been saved in chat history. Connect an AI backend when you're ready.";
       addMessage(reply, "assistant");
-      speakReply(reply);
+  
     }
   } finally {
     if (activeChatController === controller) activeChatController = null;
@@ -319,14 +302,14 @@ $("chatInput").onkeydown = e => {
 $("mic").onclick = openVoiceMode;
 $("voiceClose").onclick = closeVoiceMode;
 $("voiceStop").onclick = () => {
-  if (voiceIsListening && voiceRecognition) {
+  if (voiceRecognition) {
     try { voiceRecognition.stop(); } catch {}
     voiceRecognition = null;
-    voiceIsListening = false;
-    updateVoiceControls("Voice input stopped");
-  } else {
-    stopCurrentResponse();
   }
+  voiceIsListening = false;
+  const transcript = $("voiceTranscript").textContent.trim() || voiceTranscript.trim();
+  if (transcript) $("chatInput").value = transcript;
+  updateVoiceControls(transcript ? "Recording stopped — your words are in the message box." : "Recording stopped.");
 };
 $("voiceSend").onclick = () => {
   if (voiceRecognition) {
@@ -334,8 +317,13 @@ $("voiceSend").onclick = () => {
     voiceRecognition = null;
   }
   voiceIsListening = false;
-  const text = $("chatInput").value.trim();
-  if (!text) return updateVoiceControls("Say something first");
+  const transcript = $("voiceTranscript").textContent.trim() || voiceTranscript.trim() || $("chatInput").value.trim();
+  if (!transcript) {
+    updateVoiceControls("Say something first.");
+    return;
+  }
+  $("chatInput").value = transcript;
+  closeVoiceMode();
   sendChatMessage();
 };
 
