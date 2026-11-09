@@ -56,6 +56,12 @@
 <button class="nav" data-tool="browser">⌖　Browser Assistant <small>10</small></button>
 </nav>
 
+<div class="project-heading">
+  <p class="label">PROJECTS</p>
+  <button id="newProject" class="project-add" title="Create project" aria-label="Create project">＋</button>
+</div>
+<div id="projectList" class="project-list"></div>
+
 <p class="label history-label">CHAT HISTORY</p>
 <div id="chatHistory" class="chat-history"></div>
 
@@ -112,6 +118,16 @@
 <div id="messages"></div>
 
 <div class="composer">
+<div id="voiceBar" class="voice-bar-inline hidden" aria-label="Voice input controls">
+  <button id="voiceClose" class="voice-round voice-close" aria-label="Close voice input">×</button>
+  <div class="voice-center">
+    <div id="voiceWave" class="voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div id="voiceStatus" class="voice-status">Listening… speak whenever you're ready.</div>
+  </div>
+  <button id="voiceStop" class="voice-round voice-stop" aria-label="Stop voice input"><span></span></button>
+  <button id="voiceSend" class="voice-round voice-send" aria-label="Send transcribed message">↑</button>
+</div>
+
 <textarea id="chatInput" placeholder="Message ClearChat..." rows="2"></textarea>
 <div class="composebottom">
 <div>
@@ -308,20 +324,6 @@
 </div>
 
 
-<div id="voiceOverlay" class="voice-overlay hidden" role="dialog" aria-modal="true" aria-label="Voice typing">
-  <div class="voice-bar">
-    <button id="voiceClose" class="voice-round voice-close" aria-label="Close voice mode">×</button>
-    <div class="voice-center">
-      <div id="voiceWave" class="voice-wave" aria-hidden="true">
-        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-      </div>
-      <div id="voiceStatus" class="voice-status">Listening… your words will appear in the message box.</div>
-      <div id="voiceTranscript" class="voice-transcript"></div>
-    </div>
-    <button id="voiceStop" class="voice-round voice-stop" aria-label="Stop voice typing"><span></span></button>
-    <button id="voiceSend" class="voice-round voice-send" aria-label="Send transcribed message">↑</button>
-  </div>
-</div>
 
 <div id="toast"></div>
 

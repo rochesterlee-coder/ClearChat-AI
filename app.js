@@ -8,6 +8,8 @@ let supabaseClient = null, recognition = null, toastTimer = null;
 let chats = JSON.parse(localStorage.getItem("cc_chats") || "[]");
 let currentChatId = null;
 let temporaryChat = null;
+let projects = JSON.parse(localStorage.getItem("cc_projects") || "[]");
+let activeProjectFilter = null;
 
 if (window.supabase && CONFIG.SUPABASE_URL && CONFIG.SUPABASE_PUBLISHABLE_KEY && !CONFIG.SUPABASE_PUBLISHABLE_KEY.includes("PASTE_")) {
   supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_PUBLISHABLE_KEY);
@@ -64,7 +66,8 @@ $("signOutButton").onclick = leaveWorkspace;
     $("authGate").classList.remove("hidden");
     if (new URLSearchParams(location.search).get("verified") === "1") authScreen("authVerified");
   }
-  loadLatestChat(); renderHistory();
+  renderProjects();
+loadLatestChat(); renderHistory();
 })();
 
 // Chat history is saved locally in this browser. It is not synced between devices.
@@ -85,22 +88,132 @@ function currentChat() {
   if (temporaryChat && temporaryChat.id === currentChatId) return temporaryChat;
   return chats.find(c => c.id === currentChatId);
 }
+function saveProjects() {
+  localStorage.setItem("cc_projects", JSON.stringify(projects));
+  renderProjects();
+}
+function renderProjects() {
+  const host = $("projectList");
+  if (!host) return;
+  host.innerHTML = "";
+  const all = document.createElement("button");
+  all.className = "project-item" + (activeProjectFilter === null ? " active" : "");
+  all.textContent = "▦  All projects";
+  all.onclick = () => { activeProjectFilter = null; renderProjects(); renderHistory(); };
+  host.appendChild(all);
+  projects.forEach(project => {
+    const item = document.createElement("button");
+    item.className = "project-item" + (activeProjectFilter === project.id ? " active" : "");
+    item.textContent = "▰  " + project.name;
+    item.title = project.name;
+    item.onclick = () => { activeProjectFilter = project.id; renderProjects(); renderHistory(); };
+    host.appendChild(item);
+  });
+}
+function createProject() {
+  const name = prompt("Name your project:");
+  if (!name || !name.trim()) return;
+  const project = { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), name: name.trim().slice(0, 40), createdAt: Date.now() };
+  projects.push(project);
+  saveProjects();
+  activeProjectFilter = project.id;
+  renderHistory();
+  toast("Project created.");
+}
+$("newProject")?.addEventListener("click", createProject);
+
+function closeChatMenus(except) {
+  document.querySelectorAll(".chat-menu").forEach(menu => {
+    if (menu !== except) menu.classList.add("hidden");
+  });
+}
 function renderHistory() {
   const host = $("chatHistory"); if (!host) return;
   host.innerHTML = "";
-  const ordered = chats.slice().sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.updatedAt - a.updatedAt);
+  const filtered = activeProjectFilter === null
+    ? chats
+    : chats.filter(c => c.projectId === activeProjectFilter);
+  const ordered = filtered.slice().sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.updatedAt - a.updatedAt);
   ordered.forEach(chat => {
-    const row = document.createElement("div"); row.className = "history-row" + (chat.id === currentChatId ? " selected" : "");
-    const open = document.createElement("button"); open.className = "history-open"; open.textContent = (chat.pinned ? "📌 " : "") + (chat.title || "New chat"); open.title = chat.title || "New chat";
-    open.onclick = () => { temporaryChat = null; currentChatId = chat.id; renderCurrentChat(); renderHistory(); switchTool("chat"); };
-    const pin = document.createElement("button"); pin.className = "history-pin"; pin.textContent = chat.pinned ? "📌" : "☆"; pin.title = chat.pinned ? "Unpin conversation" : "Pin conversation";
+    const row = document.createElement("div");
+    row.className = "history-row" + (chat.id === currentChatId ? " selected" : "");
+    const open = document.createElement("button");
+    open.className = "history-open";
+    open.textContent = (chat.pinned ? "📌 " : "") + (chat.title || "New chat");
+    open.title = chat.title || "New chat";
+    open.onclick = () => {
+      temporaryChat = null; currentChatId = chat.id;
+      renderCurrentChat(); renderHistory(); switchTool("chat");
+    };
+
+    const actions = document.createElement("div");
+    actions.className = "history-actions";
+    const pin = document.createElement("button");
+    pin.className = "history-pin";
+    pin.textContent = chat.pinned ? "📌" : "☆";
+    pin.title = chat.pinned ? "Unpin chat" : "Pin chat";
     pin.setAttribute("aria-label", pin.title);
-    pin.onclick = () => { chat.pinned = !chat.pinned; saveChats(); };
-    const del = document.createElement("button"); del.className = "history-delete"; del.textContent = "×"; del.title = "Delete conversation";
-    del.onclick = () => { chats = chats.filter(c => c.id !== chat.id); if (currentChatId === chat.id) { currentChatId = null; temporaryChat = null; } saveChats(); renderCurrentChat(); };
-    row.append(open, pin, del); host.appendChild(row);
+    pin.onclick = e => { e.stopPropagation(); chat.pinned = !chat.pinned; saveChats(); };
+
+    const more = document.createElement("button");
+    more.className = "history-more";
+    more.textContent = "•••";
+    more.title = "Chat options";
+    more.setAttribute("aria-label", "Chat options");
+    const menu = document.createElement("div");
+    menu.className = "chat-menu hidden";
+
+    const addMenuAction = (label, action, danger = false) => {
+      const button = document.createElement("button");
+      button.className = "chat-menu-item" + (danger ? " danger" : "");
+      button.textContent = label;
+      button.onclick = e => { e.stopPropagation(); menu.classList.add("hidden"); action(); };
+      menu.appendChild(button);
+    };
+    addMenuAction("✎  Rename", () => {
+      const name = prompt("Rename chat:", chat.title || "");
+      if (name && name.trim()) { chat.title = name.trim().slice(0, 80); chat.updatedAt = Date.now(); saveChats(); }
+    });
+    addMenuAction(chat.pinned ? "📌  Unpin" : "📌  Pin", () => {
+      chat.pinned = !chat.pinned; saveChats();
+    });
+    if (projects.length) {
+      const moveLabel = document.createElement("div");
+      moveLabel.className = "chat-menu-label";
+      moveLabel.textContent = "Move to project";
+      menu.appendChild(moveLabel);
+      projects.forEach(project => addMenuAction("▰  " + project.name, () => {
+        chat.projectId = project.id; saveChats();
+        if (currentChatId === chat.id && activeProjectFilter !== null) {
+          activeProjectFilter = project.id;
+        }
+        renderProjects(); renderHistory();
+      }));
+      if (chat.projectId) addMenuAction("↩  Remove from project", () => {
+        delete chat.projectId;
+        if (activeProjectFilter !== null) activeProjectFilter = null;
+        saveChats(); renderProjects(); renderHistory();
+      });
+    }
+    addMenuAction("🗑  Delete", () => {
+      if (!confirm("Delete this chat? This cannot be undone.")) return;
+      chats = chats.filter(c => c.id !== chat.id);
+      if (currentChatId === chat.id) { currentChatId = null; temporaryChat = null; }
+      saveChats(); renderCurrentChat();
+    }, true);
+
+    more.onclick = e => {
+      e.stopPropagation();
+      const opening = menu.classList.contains("hidden");
+      closeChatMenus(menu);
+      menu.classList.toggle("hidden", !opening);
+    };
+    actions.append(pin, more);
+    row.append(open, actions, menu);
+    host.appendChild(row);
   });
 }
+document.addEventListener("click", () => closeChatMenus());
 function renderCurrentChat() {
   const messages = $("messages"); messages.innerHTML = "";
   const chat = currentChat();
@@ -149,6 +262,10 @@ let voiceRecognition = null;
 let voiceTranscript = "";
 let voiceIsListening = false;
 let voiceIsSpeaking = false;
+let voiceAudioContext = null;
+let voiceAnalyser = null;
+let voiceMediaStream = null;
+let voiceMeterFrame = 0;
 
 function setSendState(state) {
   const button = $("send");
@@ -167,47 +284,85 @@ function setSendState(state) {
     button.classList.remove("send-stop");
   }
 }
-function stopCurrentResponse() {
-  if (activeChatController) {
-    activeChatController.abort();
-    activeChatController = null;
+function stopVoiceMeter() {
+  if (voiceMeterFrame) cancelAnimationFrame(voiceMeterFrame);
+  voiceMeterFrame = 0;
+  if (voiceMediaStream) voiceMediaStream.getTracks().forEach(track => track.stop());
+  voiceMediaStream = null;
+  if (voiceAudioContext) voiceAudioContext.close().catch(() => {});
+  voiceAudioContext = null;
+  voiceAnalyser = null;
+  $("voiceWave")?.classList.remove("active");
+  $("voiceWave")?.style.removeProperty("--voice-level");
+}
+async function startVoiceMeter() {
+  if (!navigator.mediaDevices?.getUserMedia) return;
+  try {
+    voiceMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voiceAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = voiceAudioContext.createMediaStreamSource(voiceMediaStream);
+    voiceAnalyser = voiceAudioContext.createAnalyser();
+    voiceAnalyser.fftSize = 256;
+    source.connect(voiceAnalyser);
+    const data = new Uint8Array(voiceAnalyser.frequencyBinCount);
+    const meter = () => {
+      if (!voiceAnalyser || !voiceModeOpen) return;
+      voiceAnalyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (const value of data) { const n = (value - 128) / 128; sum += n * n; }
+      const rms = Math.sqrt(sum / data.length);
+      const level = Math.min(1, Math.max(0, (rms - 0.012) * 12));
+      const wave = $("voiceWave");
+      if (wave) {
+        wave.classList.toggle("active", level > 0.035);
+        wave.style.setProperty("--voice-level", String(level));
+      }
+      voiceMeterFrame = requestAnimationFrame(meter);
+    };
+    meter();
+  } catch {
+    $("voiceStatus").textContent = "Microphone permission is needed for live sound waves.";
   }
-  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-  voiceIsSpeaking = false;
-  voiceIsListening = false;
-  if (voiceRecognition) {
-    try { voiceRecognition.stop(); } catch {}
-    voiceRecognition = null;
+}
+function setSendState(state) {
+  const button = $("send");
+  if (!button) return;
+  if (state === "busy") {
+    button.textContent = "■";
+    button.setAttribute("aria-label", "Stop response");
+    button.classList.add("send-stop");
+  } else if (state === "done") {
+    button.textContent = "✨";
+    button.setAttribute("aria-label", "Ready for another message");
+    button.classList.remove("send-stop");
+  } else {
+    button.textContent = "↑";
+    button.setAttribute("aria-label", "Send message");
+    button.classList.remove("send-stop");
   }
-  setSendState("done");
-  updateVoiceControls("Stopped");
-  $("status").textContent = "Stopped";
 }
 function updateVoiceControls(status) {
-  const statusEl = $("voiceStatus");
-  if (statusEl && status) statusEl.textContent = status;
+  if (status && $("voiceStatus")) $("voiceStatus").textContent = status;
   const stop = $("voiceStop");
-  if (stop) stop.classList.toggle("voice-stop-active", voiceIsListening || voiceIsSpeaking || !!activeChatController);
-  const wave = $("voiceWave");
-  if (wave) wave.classList.toggle("active", voiceIsListening || voiceIsSpeaking);
+  if (stop) stop.classList.toggle("voice-stop-active", voiceIsListening);
 }
 function openVoiceMode() {
   voiceModeOpen = true;
-  $("voiceOverlay").classList.remove("hidden");
-  $("voiceTranscript").textContent = "";
-  voiceTranscript = "";
+  $("voiceBar").classList.remove("hidden");
+  voiceTranscript = $("chatInput").value.trim();
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Speech) {
-    updateVoiceControls("Voice recognition isn't available in this browser. You can still type below.");
+    updateVoiceControls("Voice recognition isn't supported in this browser.");
     return;
   }
+  startVoiceMeter();
   try {
     voiceRecognition = new Speech();
     voiceRecognition.lang = $("voiceLang").value;
     voiceRecognition.interimResults = true;
     voiceRecognition.continuous = true;
     voiceIsListening = true;
-    updateVoiceControls("Listening… speak now");
+    updateVoiceControls("Listening… speak whenever you're ready.");
     voiceRecognition.onresult = event => {
       let finalText = "";
       let interimText = "";
@@ -217,35 +372,37 @@ function openVoiceMode() {
         else interimText += part;
       }
       if (finalText) voiceTranscript += (voiceTranscript ? " " : "") + finalText.trim();
-      $("voiceTranscript").textContent = (voiceTranscript + " " + interimText).trim();
       $("chatInput").value = (voiceTranscript + " " + interimText).trim();
+      if ((finalText + interimText).trim()) updateVoiceControls("Hearing you…");
     };
-    voiceRecognition.onerror = () => {
+    voiceRecognition.onerror = event => {
       voiceIsListening = false;
-      updateVoiceControls("Microphone unavailable. Check browser permission.");
+      updateVoiceControls(event.error === "not-allowed" ? "Allow microphone access in your browser." : "Microphone paused. You can still edit the text.");
     };
     voiceRecognition.onend = () => {
       voiceIsListening = false;
-      voiceRecognition = null;
-      if (!voiceIsSpeaking && !activeChatController) updateVoiceControls("Voice input paused");
+      updateVoiceControls("Voice paused — your words are in the message box.");
     };
     voiceRecognition.start();
   } catch {
     voiceIsListening = false;
-    updateVoiceControls("Could not start microphone. Check permission.");
+    updateVoiceControls("Could not start microphone. Check browser permission.");
   }
 }
-function closeVoiceMode() {
+function stopVoiceInput() {
   if (voiceRecognition) {
     try { voiceRecognition.stop(); } catch {}
     voiceRecognition = null;
   }
   voiceIsListening = false;
+  stopVoiceMeter();
+  updateVoiceControls("Stopped. Your words are in the message box.");
+}
+function closeVoiceMode() {
+  stopVoiceInput();
   voiceModeOpen = false;
-  const transcript = $("voiceTranscript").textContent.trim() || voiceTranscript.trim();
-  if (transcript) $("chatInput").value = transcript;
-  $("voiceOverlay").classList.add("hidden");
-  updateVoiceControls("");
+  $("voiceBar").classList.add("hidden");
+  $("chatInput").focus();
 }
 // Voice input is speech-to-text only. ClearChat does not read replies aloud.
 function speakReply() {}
@@ -299,34 +456,16 @@ $("chatInput").onkeydown = e => {
     else sendChatMessage();
   }
 };
-$("mic").onclick = openVoiceMode;
+$("mic").onclick = () => voiceModeOpen ? closeVoiceMode() : openVoiceMode();
 $("voiceClose").onclick = closeVoiceMode;
-$("voiceStop").onclick = () => {
-  if (voiceRecognition) {
-    try { voiceRecognition.stop(); } catch {}
-    voiceRecognition = null;
-  }
-  voiceIsListening = false;
-  const transcript = $("voiceTranscript").textContent.trim() || voiceTranscript.trim();
-  if (transcript) $("chatInput").value = transcript;
-  updateVoiceControls(transcript ? "Recording stopped — your words are in the message box." : "Recording stopped.");
-};
+$("voiceStop").onclick = stopVoiceInput;
 $("voiceSend").onclick = () => {
-  if (voiceRecognition) {
-    try { voiceRecognition.stop(); } catch {}
-    voiceRecognition = null;
-  }
-  voiceIsListening = false;
-  const transcript = $("voiceTranscript").textContent.trim() || voiceTranscript.trim() || $("chatInput").value.trim();
-  if (!transcript) {
-    updateVoiceControls("Say something first.");
-    return;
-  }
-  $("chatInput").value = transcript;
+  stopVoiceInput();
+  const transcript = $("chatInput").value.trim();
   closeVoiceMode();
-  sendChatMessage();
+  if (transcript) sendChatMessage();
+  else toast("Say something first.");
 };
-
 
 function saveUsage() { localStorage.setItem("cc_usage", JSON.stringify(used)); applyDisplayName(localStorage.getItem("cc_display_name") || "");
 updateUsage(); }
