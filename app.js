@@ -587,6 +587,7 @@ function updateUsage() {
   });
   const profile = $("profilePlan");
   if (profile) profile.textContent = owner ? "Owner access · Unlimited" : currentPlan + " plan";
+  if (typeof refreshSubscriptionUI === "function") refreshSubscriptionUI();
 }
 function isOwnerMode() { return sessionStorage.getItem("cc_owner_mode") === "enabled"; }
 function credit(key) {
@@ -646,6 +647,73 @@ $("plans").onclick = e => {
   if (plan === currentPlan) return toast("This is your current plan.");
   toast("Checkout is not connected yet. No plan or payment has changed.");
 };
+
+// Subscription-management preview. Real billing cancellation must be wired to
+// a payment provider on the backend before this is used for paid subscriptions.
+let cancelAtPeriodEnd = localStorage.getItem("cc_cancel_at_period_end") === "true";
+let subscriptionEndsAt = Number(localStorage.getItem("cc_subscription_ends_at") || 0);
+
+function refreshSubscriptionUI() {
+  const owner = isOwnerMode();
+  const paid = currentPlan !== "Free" && !owner;
+  const name = $("subscriptionName");
+  const status = $("subscriptionStatus");
+  const end = $("subscriptionEnd");
+  if (name) name.textContent = owner ? "Owner access" : currentPlan + (paid ? " plan" : " plan");
+  if (status) status.textContent = owner ? "Unlimited owner access" :
+    !paid ? "No paid subscription is active." :
+    cancelAtPeriodEnd ? "Cancellation scheduled" : "Active · Billing preview";
+  if (end) end.textContent = paid && cancelAtPeriodEnd && subscriptionEndsAt
+    ? "Preview access ends: " + new Date(subscriptionEndsAt).toLocaleDateString()
+    : paid ? "Real recurring billing is not connected yet." : "";
+  $("cancelSubscription")?.classList.toggle("hidden", !paid || cancelAtPeriodEnd);
+  $("reactivateSubscription")?.classList.toggle("hidden", !paid || !cancelAtPeriodEnd);
+  $("manageSubscription")?.classList.toggle("hidden", owner);
+}
+
+function checkPreviewSubscriptionExpiry() {
+  if (cancelAtPeriodEnd && subscriptionEndsAt && Date.now() >= subscriptionEndsAt) {
+    currentPlan = "Free";
+    LIMIT = PLAN_LIMITS.Free;
+    cancelAtPeriodEnd = false;
+    subscriptionEndsAt = 0;
+    localStorage.setItem("cc_plan", "Free");
+    localStorage.removeItem("cc_cancel_at_period_end");
+    localStorage.removeItem("cc_subscription_ends_at");
+    updateUsage();
+    toast("Your preview plan has ended. You're now on Free.");
+  }
+}
+$("manageSubscription")?.addEventListener("click", () => {
+  refreshSubscriptionUI();
+  toast("Subscription settings are shown below the plan cards.");
+});
+$("cancelSubscription")?.addEventListener("click", () => {
+  $("cancelPlanDescription").textContent =
+    `Your ${currentPlan} preview plan will remain active for 30 more days, then switch to Free. This is not a real billing cancellation.`;
+  $("cancelPlanModal").classList.remove("hidden");
+});
+$("confirmCancelPlan")?.addEventListener("click", () => {
+  if (currentPlan === "Free" || isOwnerMode()) return;
+  cancelAtPeriodEnd = true;
+  subscriptionEndsAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  localStorage.setItem("cc_cancel_at_period_end", "true");
+  localStorage.setItem("cc_subscription_ends_at", String(subscriptionEndsAt));
+  $("cancelPlanModal").classList.add("hidden");
+  refreshSubscriptionUI();
+  toast("Preview cancellation scheduled. No real payment was changed.");
+});
+$("reactivateSubscription")?.addEventListener("click", () => {
+  cancelAtPeriodEnd = false;
+  subscriptionEndsAt = 0;
+  localStorage.removeItem("cc_cancel_at_period_end");
+  localStorage.removeItem("cc_subscription_ends_at");
+  refreshSubscriptionUI();
+  toast("Your preview plan is kept.");
+});
+document.querySelectorAll("[data-close]").forEach(button => {
+  button.addEventListener("click", () => $(button.dataset.close)?.classList.add("hidden"));
+});
 function setTheme(theme) { document.body.dataset.theme = theme; localStorage.setItem("cc_theme", theme); $("themeSelect").value = theme; }
 setTheme(localStorage.getItem("cc_theme") || "dark");
 $("themeQuick").onclick = () => { const options = ["dark", "black", "light", "white", "midnight"]; setTheme(options[(options.indexOf(document.body.dataset.theme) + 1) % options.length]); toast("Theme: " + document.body.dataset.theme); };
@@ -694,3 +762,6 @@ updateUsage();
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && voiceModeOpen) closeVoiceMode();
 });
+
+checkPreviewSubscriptionExpiry();
+refreshSubscriptionUI();

@@ -272,6 +272,20 @@
 <p>Start free, upgrade when you need more.</p>
 </div>
 <div id="plans" class="plans"></div>
+<div class="subscription-panel">
+  <div>
+    <small>CURRENT SUBSCRIPTION</small>
+    <h2 id="subscriptionName">Free plan</h2>
+    <p id="subscriptionStatus">No paid subscription is active.</p>
+    <p id="subscriptionEnd" class="fine"></p>
+  </div>
+  <div class="subscription-actions">
+    <button id="manageSubscription" class="secondary">Manage subscription</button>
+    <button id="cancelSubscription" class="danger-outline hidden">Cancel subscription</button>
+    <button id="reactivateSubscription" class="secondary hidden">Keep my plan</button>
+  </div>
+  <p class="fine">Billing preview only: checkout and real payment-provider cancellation are not connected yet. No payment is taken or cancelled by these controls.</p>
+</div>
 <p class="fine">Prices in MYR per month. Checkout is not connected yet.</p>
 </section>
 </main>
@@ -307,6 +321,20 @@
 </select>
 <p>Language preference preview. Full translations and multilingual AI responses need backend integration.</p>
 <button id="saveSettings" class="wide">Save preferences</button>
+</div>
+</div>
+
+<div id="cancelPlanModal" class="backdrop hidden">
+<div class="modal">
+<button class="close" data-close="cancelPlanModal">×</button>
+<small>SUBSCRIPTION SETTINGS</small>
+<h2>Cancel your plan?</h2>
+<p id="cancelPlanDescription">Your paid features will remain available until the end of your preview billing period.</p>
+<p class="fine">This is a local preview only. It does not contact a payment provider or stop real recurring charges.</p>
+<div class="subscription-actions">
+<button id="confirmCancelPlan" class="danger">Confirm cancellation</button>
+<button class="secondary" data-close="cancelPlanModal">Keep my plan</button>
+</div>
 </div>
 </div>
 
