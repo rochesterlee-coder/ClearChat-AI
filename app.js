@@ -2,7 +2,15 @@
 const $ = id => document.getElementById(id);
 const CONFIG = window.CLEARCHAT_CONFIG || {};
 const API_BASE = (CONFIG.API_BASE_URL || "").replace(/\/$/, "");
-const LIMIT = { image: 30, video: 10, browser: 10, code: 50, music: 20 };
+const PLAN_LIMITS = {
+  Free:  { image: 30,  video: 10,  browser: 10,  code: 50,  music: 20 },
+  Go:    { image: 50,  video: 20,  browser: 50,  code: 100, music: 30 },
+  Plus:  { image: 70,  video: 50,  browser: 70,  code: 150, music: 40 },
+  Pro:   { image: 100, video: 100, browser: 150, code: 200, music: 100 },
+  Ultra: { image: Infinity, video: Infinity, browser: Infinity, code: Infinity, music: Infinity }
+};
+let currentPlan = PLAN_LIMITS[localStorage.getItem("cc_plan")] ? localStorage.getItem("cc_plan") : "Free";
+let LIMIT = PLAN_LIMITS[currentPlan];
 let used = JSON.parse(localStorage.getItem("cc_usage") || '{"image":0,"video":0,"browser":0,"code":0,"music":0}');
 let supabaseClient = null, recognition = null, toastTimer = null;
 let chats = JSON.parse(localStorage.getItem("cc_chats") || "[]");
@@ -559,18 +567,26 @@ function saveUsage() { localStorage.setItem("cc_usage", JSON.stringify(used)); a
 updateUsage(); }
 function updateUsage() {
   const items = [
-    ["image", "iu", "im", 30], ["video", "vu", "vm", 10],
-    ["browser", "bu", "bm", 10], ["code", "cu", "cm", 50],
-    ["music", "mu", "mm", 20]
+    ["image", "iu", "im"], ["video", "vu", "vm"],
+    ["browser", "bu", "bm"], ["code", "cu", "cm"],
+    ["music", "mu", "mm"]
   ];
   const owner = isOwnerMode();
+  LIMIT = PLAN_LIMITS[currentPlan] || PLAN_LIMITS.Free;
   const title = $("usagePlanTitle");
-  if (title) title.childNodes[0].textContent = owner ? "OWNER ACCESS " : "FREE PLAN ";
-  items.forEach(([key, valueId, meterId, limit]) => {
-    const value = $(valueId), meter = $(meterId);
-    if (value) value.textContent = owner ? "Unlimited" : used[key] + " / " + limit;
-    if (meter) meter.style.width = owner ? "100%" : Math.min(100, used[key] / limit * 100) + "%";
+  if (title) title.childNodes[0].textContent = owner ? "OWNER ACCESS " : currentPlan.toUpperCase() + " PLAN ";
+  items.forEach(([key, valueId, meterId]) => {
+    const limit = LIMIT[key], value = $(valueId), meter = $(meterId);
+    if (value) value.textContent = owner || limit === Infinity ? "Unlimited" : used[key] + " / " + limit;
+    if (meter) meter.style.width = owner || limit === Infinity ? "100%" : Math.min(100, used[key] / limit * 100) + "%";
   });
+  const labels = { image:"imageLimit", video:"videoLimit", code:"codeLimit", music:"musicLimit", browser:"browserLimit" };
+  Object.entries(labels).forEach(([key,id]) => {
+    const el = $(id);
+    if (el) el.textContent = owner || LIMIT[key] === Infinity ? "∞" : LIMIT[key];
+  });
+  const profile = $("profilePlan");
+  if (profile) profile.textContent = owner ? "Owner access · Unlimited" : currentPlan + " plan";
 }
 function isOwnerMode() { return sessionStorage.getItem("cc_owner_mode") === "enabled"; }
 function credit(key) {
@@ -606,9 +622,30 @@ $("planBrowser").onclick = async () => {
   catch { $("browserOut").textContent = "This starter can preview plans, but browser automation is not connected."; }
 };
 
-const planData = [["Free", "RM0", ["Unlimited chat", "30 images", "10 videos", "10 browser prompts", "50 code generations", "20 songs"]], ["Go", "RM3", ["Paid tier preview", "More room to create"]], ["Plus", "RM10", ["Paid tier preview", "Expanded workspace"]], ["Pro", "RM30", ["Paid tier preview", "Advanced workspace"]], ["Ultra", "RM50", ["Paid tier preview", "Top-tier workspace"]]];
-$("plans").innerHTML = planData.map((p, i) => `<article class="plan-card ${i === 2 ? "featured" : ""}"><h3>${p[0]}</h3><div class="price">${p[1]}<small> / month</small></div><p>${p[2].join("<br>• ")}</p><button data-plan="${p[0]}">${i ? "Select " + p[0] : "Current plan"}</button></article>`).join("");
-$("plans").onclick = e => { const button = e.target.closest("[data-plan]"); if (button && button.dataset.plan !== "Free") toast("Secure checkout is not configured. No payment has been taken."); };
+const planData = [
+  ["Free", "RM0", ["Unlimited chat", "30 images", "10 videos", "10 browser prompts", "50 code generations", "20 songs"]],
+  ["Go", "RM3", ["50 images", "20 videos", "50 browser prompts", "100 code generations", "30 songs"]],
+  ["Plus", "RM10", ["70 images", "50 videos", "70 browser prompts", "150 code generations", "40 songs"]],
+  ["Pro", "RM30", ["100 images", "100 videos", "150 browser prompts", "200 code generations", "100 songs"]],
+  ["Ultra", "RM50", ["UNLIMITED images", "UNLIMITED videos", "UNLIMITED browser prompts", "UNLIMITED code generations", "UNLIMITED songs"]]
+];
+$("plans").innerHTML = planData.map((p, i) => `<article class="plan-card ${i === 2 ? "featured" : ""} ${i === 3 ? "best-deal" : ""}"><h3>${p[0]}${i === 3 ? '<span class="best-deal-tag">BEST DEAL!!!</span>' : ""}</h3><div class="price">${p[1]}<small> / month</small></div><p>${p[2].join("<br>• ")}</p><button data-plan="${p[0]}">${p[0] === currentPlan ? "Current plan" : "Select " + p[0]}</button></article>`).join("");
+// Called only after a trusted payment provider confirms a purchase.
+function applyPurchasedPlan(plan) {
+  if (!PLAN_LIMITS[plan]) return false;
+  currentPlan = plan;
+  LIMIT = PLAN_LIMITS[plan];
+  localStorage.setItem("cc_plan", plan);
+  updateUsage();
+  return true;
+}
+$("plans").onclick = e => {
+  const button = e.target.closest("[data-plan]");
+  if (!button) return;
+  const plan = button.dataset.plan;
+  if (plan === currentPlan) return toast("This is your current plan.");
+  toast("Checkout is not connected yet. No plan or payment has changed.");
+};
 function setTheme(theme) { document.body.dataset.theme = theme; localStorage.setItem("cc_theme", theme); $("themeSelect").value = theme; }
 setTheme(localStorage.getItem("cc_theme") || "dark");
 $("themeQuick").onclick = () => { const options = ["dark", "black", "light", "white", "midnight"]; setTheme(options[(options.indexOf(document.body.dataset.theme) + 1) % options.length]); toast("Theme: " + document.body.dataset.theme); };
