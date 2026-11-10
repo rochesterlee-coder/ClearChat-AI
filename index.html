@@ -1,16 +1,11 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ClearChat AI — Your AI workspace</title>
-<link rel="icon" href="favicon.ico?v=2" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=2">
-<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png?v=2">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
-<meta name="theme-color" content="#100b20"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css"></head>
+<title>ClearChat AI — Your AI workspace</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="styles.css"></head>
 <body data-theme="dark">
 
   <div class="auth-gate" id="authGate">
     <div class="auth-card">
-      <a class="brand auth-brand" href="#"><img class="brand-icon-img" src="clearchat-icon.png" alt="ClearChat icon"><span>ClearChat</span></a>
+      <a class="brand auth-brand" href="#"><img class="brand-logo" src="assets/clearchat-logo.png" alt=""><span>ClearChat</span></a>
       <div id="locationSetup" class="hidden">
         <div class="overline">PERSONALIZE YOUR TIME</div>
         <h2>Where do you live?</h2>
@@ -57,18 +52,13 @@
 <div class="layout">
 <aside class="sidebar" id="sidebar">
 
-<a class="brand" href="#"><img class="logo-img" src="clearchat-icon.png" alt="ClearChat icon">ClearChat</a>
+<a class="brand" href="#"><img class="brand-logo" src="assets/clearchat-logo.png" alt="">ClearChat</a>
 <button class="newchat" id="newChat">＋ New chat</button>
 <button class="newchat temporary-chat-button" id="newTemporaryChat">◌ Temporary chat</button>
 <p class="label">WORKSPACE</p>
 
-<nav>
-<button class="nav active" data-tool="chat">◉　AI Chat</button>
-<button class="nav" data-tool="image">▧　Image Studio <small><span id="imageLimit">30</span></small></button>
-<button class="nav" data-tool="video">▣　Video Studio <small><span id="videoLimit">10</span></small></button>
-<button class="nav" data-tool="code">&lt;/&gt;　Code Studio <small><span id="codeLimit">50</span></small></button>
-<button class="nav" data-tool="music">♫　Music Studio <small><span id="musicLimit">20</span></small></button>
-<button class="nav" data-tool="browser">⌖　Browser Assistant <small><span id="browserLimit">10</span></small></button>
+<nav class="workspace-nav">
+<button class="nav active" data-tool="chat">◉　All-in-One Chat</button>
 </nav>
 
 <div class="project-heading">
@@ -131,8 +121,26 @@
 </div>
 </div>
 
+<div class="chat-tool-hint">
+  <span>ONE CHAT · ALL TOOLS</span>
+  <div class="chat-tool-chips">
+    <button type="button" data-prompt="Generate an image of ">▧ Image</button>
+    <button type="button" data-prompt="Create a short video of ">▣ Video</button>
+    <button type="button" data-prompt="Write code that ">⌘ Code</button>
+    <button type="button" data-prompt="Create a song about ">♫ Music</button>
+    <button type="button" data-prompt="Search the web for ">⌕ Browse</button>
+  </div>
+</div>
 <div id="messages"></div>
 
+<div class="chat-usage-strip" id="chatUsageSummary" aria-live="polite">
+  <div class="chat-usage-title"><b id="chatPlanBadge">FREE PLAN</b><span>USAGE</span></div>
+  <span>Images <strong id="chatImageUsage">0 / 30</strong></span>
+  <span>Videos <strong id="chatVideoUsage">0 / 10</strong></span>
+  <span>Browser <strong id="chatBrowserUsage">0 / 10</strong></span>
+  <span>Code <strong id="chatCodeUsage">0 / 50</strong></span>
+  <span>Songs <strong id="chatMusicUsage">0 / 20</strong></span>
+</div>
 <div class="composer">
 <div id="voiceBar" class="voice-bar-inline hidden" aria-label="Voice input controls">
   <button id="voiceClose" class="voice-round voice-close" aria-label="Close voice input">×</button>
@@ -160,7 +168,7 @@
 <option value="fr-FR">Français</option>
 <option value="ar-SA">العربية</option>
 </select>
-<small id="status">Demo mode — AI backend not connected</small>
+<small id="status">Describe anything — ClearChat detects the tool automatically</small>
 </div>
 <button id="send" class="send">↑</button>
 </div>

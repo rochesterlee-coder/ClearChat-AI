@@ -326,9 +326,9 @@ function switchTool(tool) {
 document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => switchTool(b.dataset.tool));
 $("mobile").onclick = () => $("sidebar").classList.toggle("open");
 document.querySelectorAll("[data-prompt]").forEach(b => b.onclick = () => { $("chatInput").value = b.dataset.prompt; $("chatInput").focus(); });
-async function api(path, body) {
+async function api(path, body, signal) {
   if (!API_BASE) throw new Error("AI backend is not connected yet. Set API_BASE_URL in config.js.");
-  const response = await fetch(`${API_BASE}/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const response = await fetch(`${API_BASE}/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || data.message || `Request failed (${response.status})`);
   return data;
@@ -538,40 +538,105 @@ $("chatInput")?.addEventListener("paste", e => {
 $("chatInput")?.addEventListener("dragover", e => e.preventDefault());
 $("chatInput")?.addEventListener("drop", e => { e.preventDefault(); addFiles(e.dataTransfer?.files); });
 
+function detectChatTool(prompt) {
+  const text = prompt.toLowerCase();
+  // More specific media/code intents are checked before general chat.
+  if (/\b(make|create|generate|draw|design)\b.{0,45}\b(video|clip|animation|short film)\b|\b(video|clip|animation)\b.{0,35}\b(of|about|showing|where)\b/.test(text)) return "video";
+  if (/\b(make|create|generate|compose|write)\b.{0,45}\b(song|music|soundtrack|jingle|beat|melody|instrumental|audio track)\b|\b(song|soundtrack|instrumental)\b.{0,35}\b(about|for|with)\b/.test(text)) return "music";
+  if (/\b(generate|make|create|draw|design|show me)\b.{0,45}\b(image|picture|photo|illustration|wallpaper|logo|poster|artwork)\b|\b(image|picture|photo|illustration|wallpaper)\b.{0,25}\b(of|showing|for)\b/.test(text)) return "image";
+  if (/\b(write|generate|create|build|debug|fix|code|program|script|function|website|html|css|javascript|python)\b/.test(text) && /\b(code|python|javascript|java|html|css|program|script|function|bug|error|website|app)\b/.test(text)) return "code";
+  if (/\b(search the web|browse|look up|find online|latest news|current news|search online|research online)\b/.test(text)) return "browser";
+  return "chat";
+}
+function detectCodeLanguage(prompt) {
+  const t = prompt.toLowerCase();
+  for (const name of ["python","javascript","typescript","java","c++","c#","html","css","sql","php","ruby","go","rust"]) {
+    if (t.includes(name)) return name;
+  }
+  return "Python";
+}
+function canUseFeature(key) {
+  resetExpiredUsageWindow();
+  if (isOwnerMode()) return true;
+  if (used[key] < LIMIT[key]) return true;
+  toast((currentPlan === "Free" ? "Free plan limit reached." : currentPlan + " plan limit reached.") + " See your usage counters in the sidebar.");
+  return false;
+}
+function appendToolCard(label, data, kind) {
+  const host = $("messages").lastElementChild;
+  if (!host) return;
+  host.classList.add("tool-message");
+  const card = document.createElement("div"); card.className = "tool-result";
+  const heading = document.createElement("div"); heading.className = "tool-label"; heading.textContent = label; card.appendChild(heading);
+  const mediaUrl = data.image_url || data.video_url || data.audio_url || data.url;
+  if (kind === "image" && mediaUrl) {
+    const img = document.createElement("img"); img.src = mediaUrl; img.alt = "Generated image"; card.appendChild(img);
+  } else if (kind === "video" && mediaUrl) {
+    const video = document.createElement("video"); video.src = mediaUrl; video.controls = true; card.appendChild(video);
+  } else if (kind === "music" && mediaUrl) {
+    const audio = document.createElement("audio"); audio.src = mediaUrl; audio.controls = true; card.appendChild(audio);
+  } else if (kind === "code") {
+    const pre = document.createElement("pre"); pre.textContent = data.code || data.output || "No code was returned."; card.appendChild(pre);
+    const copy = document.createElement("button"); copy.className = "secondary"; copy.textContent = "Copy code";
+    copy.onclick = async () => { try { await navigator.clipboard.writeText(pre.textContent); toast("Code copied."); } catch { toast("Clipboard permission unavailable."); } };
+    card.appendChild(copy);
+  } else {
+    const note = document.createElement("p"); note.textContent = data.message || data.reply || "The provider returned a result."; card.appendChild(note);
+  }
+  host.appendChild(card); card.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function runChatTool(kind, prompt) {
+  if (kind === "chat") {
+    const data = await api("chat", { message: prompt, language: $("voiceLang").value }, activeChatController?.signal);
+    addMessage(data.reply || "No reply returned.", "assistant");
+    return;
+  }
+  if (!canUseFeature(kind)) { addMessage("You've reached your " + currentPlan + " plan limit for " + kind + ". Check the usage panel in the sidebar.", "assistant"); return; }
+  const body = { prompt };
+  if (kind === "code") body.language = detectCodeLanguage(prompt);
+  if (kind === "image") body.style = "Photorealistic";
+  if (kind === "video") { const match = prompt.match(/\b(5|10|15|20|30)\s*(?:-| )?seconds?\b/i); body.duration = match ? match[1] + " seconds" : "5 seconds"; }
+  if (kind === "music") body.genre = "Ambient";
+  if (kind === "browser") {
+    const data = await api("browser", { prompt }, activeChatController?.signal);
+    addMessage("Here is a browser action plan. Review each step and carry it out yourself; this version does not control your browser.\n\n" + ((data.steps || []).join("\n") || data.message || "No steps returned."), "assistant");
+    const host = $("messages").lastElementChild; host.classList.add("tool-message");
+    const card = document.createElement("div"); card.className = "tool-result";
+    const label = document.createElement("div"); label.className = "tool-label"; label.textContent = "BROWSER ASSISTANT"; card.appendChild(label);
+    const pre = document.createElement("pre"); pre.textContent = (data.steps || []).join("\n") || data.message || "No steps returned."; card.appendChild(pre); host.appendChild(card);
+    credit("browser"); return;
+  }
+  const data = await api(kind, body, activeChatController?.signal);
+  const labels = {image:"IMAGE GENERATION",video:"VIDEO GENERATION",code:"CODE GENERATION",music:"MUSIC GENERATION"};
+  const summary = {image:"Your image request is ready.",video:"Your video request is ready.",code:"Here's the code.",music:"Your music request is ready."};
+  addMessage(kind === "code" ? (data.code || data.output || summary[kind]) : (data.message || summary[kind]), "assistant");
+  appendToolCard(labels[kind], data, kind);
+  credit(kind);
+}
 async function sendChatMessage() {
   const prompt = $("chatInput").value.trim();
   if ((!prompt && !pendingAttachments.length) || activeChatController) return;
   const attached = pendingAttachments.slice(); pendingAttachments = []; renderPendingAttachments();
   $("chatInput").value = "";
   addMessage(prompt, "user", attached);
-  if (!prompt && attached.length) { addMessage("Files are attached to this chat. File understanding needs the ClearChat AI backend to be connected.", "assistant"); return; }
-  $("status").textContent = "Thinking…";
+  if (!prompt && attached.length) { addMessage("Your files are attached to this conversation. File reading and image understanding need to be connected to the AI backend before ClearChat can analyse them.", "assistant"); return; }
+  const kind = detectChatTool(prompt);
+  const names = {chat:"AI Chat",image:"Image Studio",video:"Video Studio",code:"Code Studio",music:"Music Studio",browser:"Browser Assistant"};
+  $("status").textContent = kind === "chat" ? "Thinking…" : "Using " + names[kind] + "…";
   setSendState("busy");
   activeChatController = new AbortController();
   const controller = activeChatController;
   try {
-    const response = await fetch(`${API_BASE}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: prompt, language: $("voiceLang").value }),
-      signal: controller.signal
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || data.message || `Request failed (${response.status})`);
-    const reply = data.reply || "No reply returned.";
-    addMessage(reply, "assistant");
-
+    await runChatTool(kind, prompt);
   } catch (err) {
-    if (err.name === "AbortError") {
-      addMessage("Response stopped.", "assistant");
-    } else {
-      const reply = "ClearChat's AI is not connected yet. Your message has been saved in chat history. Connect an AI backend when you're ready.";
-      addMessage(reply, "assistant");
-  
-    }
+    const providerUnavailable = /not connected|not implemented|501|provider/i.test(err.message || "");
+    const message = providerUnavailable
+      ? `${names[kind]} is not connected to a generation provider yet. Your request was not charged a credit. You can still use normal AI chat and any backend tools that are connected.`
+      : `ClearChat couldn't complete that request: ${err.message}. No credit was charged.`;
+    addMessage(message, "assistant");
   } finally {
     if (activeChatController === controller) activeChatController = null;
-    $("status").textContent = "AI provider pending backend setup";
+    $("status").textContent = "Describe anything — ClearChat detects the tool automatically";
     if (!voiceIsSpeaking) setSendState("done");
     updateVoiceControls(voiceIsSpeaking ? "ClearChat is speaking…" : "Finished");
   }
@@ -621,6 +686,16 @@ function updateUsage() {
   Object.entries(labels).forEach(([key,id]) => {
     const el = $(id);
     if (el) el.textContent = owner || LIMIT[key] === Infinity ? "∞" : LIMIT[key];
+  });
+  const chatPlan = $("chatPlanBadge");
+  if (chatPlan) chatPlan.textContent = owner ? "OWNER ACCESS" : currentPlan.toUpperCase() + " PLAN";
+  const chatUsage = [
+    ["image", "chatImageUsage"], ["video", "chatVideoUsage"],
+    ["browser", "chatBrowserUsage"], ["code", "chatCodeUsage"], ["music", "chatMusicUsage"]
+  ];
+  chatUsage.forEach(([key, id]) => {
+    const el = $(id); if (!el) return;
+    el.textContent = owner || LIMIT[key] === Infinity ? "Unlimited" : `${used[key]} / ${LIMIT[key]}`;
   });
   const profile = $("profilePlan");
   if (profile) profile.textContent = owner ? "Owner access · Unlimited" : currentPlan + " plan";
@@ -699,7 +774,7 @@ $("copyCode").onclick = async () => { try { await navigator.clipboard.writeText(
 $("planBrowser").onclick = async () => {
   const prompt = $("browserPrompt").value.trim(); if (!prompt) return toast("Describe the browser task first."); if (!credit("browser")) return;
   $("browserOut").classList.remove("hidden"); $("browserOut").textContent = "Preparing a safe action plan…";
-  try { const data = await api("browser", { prompt }); $("browserOut").textContent = (data.steps || []).join("\n") || data.message || "No action plan returned."; }
+  try { const data = await api("browser", { prompt }, activeChatController?.signal); $("browserOut").textContent = (data.steps || []).join("\n") || data.message || "No action plan returned."; }
   catch { $("browserOut").textContent = "This starter can preview plans, but browser automation is not connected."; }
 };
 
